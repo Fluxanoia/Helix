@@ -1,5 +1,5 @@
 import os
-from tkinter import *
+from tkinter import Tk, Menu, Frame, Button
 from tkinter.messagebox import showinfo
 
 from equation import Equation

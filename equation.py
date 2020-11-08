@@ -92,7 +92,7 @@ class Equation(Frame):
             h = self.__button_size)
 
     def __update(self, *args):
-        self.label(self.getText.get())
+        self.label(self.getText())
 
     def __remove(self): 
         self.pack_forget()
