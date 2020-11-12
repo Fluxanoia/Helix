@@ -1,4 +1,4 @@
-from tkinter import Frame, Canvas, Scrollbar, NW, LEFT, RIGHT, BOTH, Y, ALL, UNITS
+from tkinter import Frame, Canvas, Scrollbar, NW, RIGHT, BOTH, Y, ALL, UNITS
 
 class ScrollableFrame(Frame):
 
@@ -10,15 +10,14 @@ class ScrollableFrame(Frame):
 
     __active_scroll = False
 
-    def __init__(self, parent, config, *args, **kwargs):
-        super().__init__(parent, args, *args, **kwargs)
+    def __init__(self, parent, config, **args):
+        super().__init__(parent, args)
         self.__config = config
-        self.__canvas = Canvas(self, *args, **kwargs)
-        self.__frame = Frame(self.__canvas, *args, **kwargs)
+        self.__canvas = Canvas(self, args)
+        self.__frame = Frame(self.__canvas, args)
         self.__scroll = Scrollbar(self, command = self.__canvas.yview)
         self.__canvas.configure(yscrollcommand = self.__scrollSet)
 
-        self.__scroll.pack(side = RIGHT, fill = Y)
         self.__canvas.pack(fill = BOTH, expand = True)
         self.__canvas.create_window((0, 0), window = self.__frame, anchor = NW)
 
@@ -34,31 +33,33 @@ class ScrollableFrame(Frame):
                 x = self.winfo_width() - self.__scroll.winfo_width(),
                 relheight = 1)
         else:
-            self.__scroll.pack_forget()
+            self.__scroll.place_forget()
         self.__onConfigure(None)
         self.__scroll.set(lo, hi)
 
-    def __onConfigure(self, event):
-        width = self.winfo_width() 
-        if self.__active_scroll: 
+    def __onConfigure(self, _event):
+        width = self.winfo_width()
+        if self.__active_scroll:
             width -= self.__scroll.winfo_width()
         self.__config(width)
 
-    def onFrameConfigure(self, event):
+    def onFrameConfigure(self, _event):
         self.__canvas.configure(scrollregion = self.__canvas.bbox(ALL))
 
-    def __bind_scroll(self, event):
-        self.__canvas.bind_all("<MouseWheel>", self.__mouse_scroll)   
+    def __bind_scroll(self, _event):
+        self.__canvas.bind_all("<MouseWheel>", self.__mouse_scroll)
         self.__canvas.bind_all("<Button-4>", self.__mouse_scroll)
         self.__canvas.bind_all("<Button-5>", self.__mouse_scroll)
 
-    def __unbind_scroll(self, event):
+    def __unbind_scroll(self, _event):
         self.__canvas.unbind_all("<MouseWheel>")
         self.__canvas.unbind_all("<Button-4>")
         self.__canvas.unbind_all("<Button-5>")
 
     def __mouse_scroll(self, event):
-        if not self.__active_scroll: return None
+        if not self.__active_scroll:
+            return None
         self.__canvas.yview_scroll(1 if event.num == 5 or event.delta < 0 else -1, UNITS)
 
-    def getInnerFrame(self): return self.__frame
+    def getInnerFrame(self):
+        return self.__frame

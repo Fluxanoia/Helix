@@ -8,14 +8,16 @@ class FontManager:
 
     @staticmethod
     def getInstance(root = None):
-        if FontManager.__instance == None: FontManager(root)
+        if FontManager.__instance is None:
+            FontManager(root)
         return FontManager.__instance
 
     def __init__(self, root):
-        if FontManager.__instance != None:
+        if FontManager.__instance is not None:
             raise Exception("Invalid initialistion of singleton.")
         else:
             FontManager.__instance = self
             self.__textFont = font.Font(root, size=16)
 
-    def getTextFont(self): return self.__textFont
+    def getTextFont(self):
+        return self.__textFont

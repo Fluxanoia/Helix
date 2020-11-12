@@ -1,7 +1,8 @@
-from tkinter import Frame, Entry, Label, Button, StringVar, SE, SW, X, BOTH
+from tkinter import Frame, Entry, Label, Button, StringVar, SE, SW, BOTH
 
-from fonts import FontManager
-from images import ImageManager
+from utils.fonts import FontManager
+from utils.images import ImageManager
+from utils.parsing import Parser
 
 class Equation(Frame):
 
@@ -30,7 +31,7 @@ class Equation(Frame):
     __bar_width = 0.1
 
     def __init__(self, parent, remove_func):
-        super().__init__(parent, bg ='#505050', height = 110)
+        super().__init__(parent, bg = parent["bg"], height = 110)
 
         self.__remove_func = remove_func
 
@@ -38,23 +39,23 @@ class Equation(Frame):
 
         self.__entry_var = StringVar()
         self.__entry_var.trace('w', self.__update)
-        self.__entry = Entry(self, 
+        self.__entry = Entry(self,
             font = font,
             textvariable = self.__entry_var)
-        self.__entry.place(relx = self.__paddingx, 
-            rely = self.__paddingy, 
+        self.__entry.place(relx = self.__paddingx,
+            rely = self.__paddingy,
             relwidth = 1 - self.__paddingx * 2)
 
         self.__label = Label(self, text = "Testing!", font = font)
-        self.__label.place(relx = self.__paddingx, 
-            rely = self.__paddingy * 2 + 0.25, 
+        self.__label.place(relx = self.__paddingx,
+            rely = self.__paddingy * 2 + 0.25,
             relwidth = 1 - self.__paddingx * 2)
 
         self.__colour_button = self.__createButton(lambda : None, "colour.png")
         self.__lock_button = self.__createButton(lambda : None, "lock.png")
         self.__hide_button = self.__createButton(lambda : None, "hide.png")
         self.__remove_button = self.__createButton(self.__remove, "remove.png")
-        
+
         self.__leftButtons = [self.__colour_button, self.__lock_button, self.__hide_button]
         self.__rightButtons = [self.__remove_button]
         self.__placeButtons()
@@ -62,11 +63,11 @@ class Equation(Frame):
         self.pack(fill = BOTH, expand = True)
 
     def __createButton(self, command, img_path):
-        return Button(self, 
-            command = command, 
+        return Button(self,
+            command = command,
             image = ImageManager.getInstance().getImage(
-                img_path, 
-                self.__button_size, 
+                img_path,
+                self.__button_size,
                 self.__button_size))
 
     def __placeButtons(self):
@@ -80,7 +81,7 @@ class Equation(Frame):
             x = self.__button_size * count,
             relx = self.__paddingx * (count + 1),
             rely = 1 - self.__paddingy,
-            w = self.__button_size, 
+            w = self.__button_size,
             h = self.__button_size)
 
     def __placeButtonRight(self, button, count = 0):
@@ -88,13 +89,13 @@ class Equation(Frame):
             x = self.__button_size * count,
             relx = 1 - self.__paddingx * (count + 1),
             rely = 1 - self.__paddingy,
-            w = self.__button_size, 
+            w = self.__button_size,
             h = self.__button_size)
 
-    def __update(self, *args):
-        self.label(self.getText())
+    def __update(self, *_args):
+        self.label(Parser.getInstance().parse(self.getText()))
 
-    def __remove(self): 
+    def __remove(self):
         self.pack_forget()
         self.__remove_func(self)
 
