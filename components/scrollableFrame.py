@@ -1,6 +1,6 @@
-from tkinter import Frame, Canvas, Scrollbar, NW, RIGHT, BOTH, Y, ALL, UNITS
+import tkinter as tk
 
-class ScrollableFrame(Frame):
+class ScrollableFrame(tk.Frame):
 
     __config = None
 
@@ -13,13 +13,13 @@ class ScrollableFrame(Frame):
     def __init__(self, parent, config, **args):
         super().__init__(parent, args)
         self.__config = config
-        self.__canvas = Canvas(self, args)
-        self.__frame = Frame(self.__canvas, args)
-        self.__scroll = Scrollbar(self, command = self.__canvas.yview)
+        self.__canvas = tk.Canvas(self, args)
+        self.__frame = tk.Frame(self.__canvas, args)
+        self.__scroll = tk.Scrollbar(self, command = self.__canvas.yview)
         self.__canvas.configure(yscrollcommand = self.__scrollSet)
 
-        self.__canvas.pack(fill = BOTH, expand = True)
-        self.__canvas.create_window((0, 0), window = self.__frame, anchor = NW)
+        self.__canvas.pack(fill = tk.BOTH, expand = True)
+        self.__canvas.create_window((0, 0), window = self.__frame, anchor = tk.NW)
 
         self.bind("<Configure>", self.__onConfigure)
         self.bind('<Enter>', self.__bind_scroll)
@@ -44,7 +44,7 @@ class ScrollableFrame(Frame):
         self.__config(width)
 
     def onFrameConfigure(self, _event):
-        self.__canvas.configure(scrollregion = self.__canvas.bbox(ALL))
+        self.__canvas.configure(scrollregion = self.__canvas.bbox(tk.ALL))
 
     def __bind_scroll(self, _event):
         self.__canvas.bind_all("<MouseWheel>", self.__mouse_scroll)
@@ -59,7 +59,10 @@ class ScrollableFrame(Frame):
     def __mouse_scroll(self, event):
         if not self.__active_scroll:
             return None
-        self.__canvas.yview_scroll(1 if event.num == 5 or event.delta < 0 else -1, UNITS)
+        self.__canvas.yview_scroll(1 if event.num == 5 or event.delta < 0 else -1, tk.UNITS)
 
     def getInnerFrame(self):
         return self.__frame
+
+    def getCanvas(self):
+        return self.__canvas

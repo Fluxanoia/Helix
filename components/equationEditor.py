@@ -1,5 +1,6 @@
-from tkinter import Button
+import tkinter as tk
 
+from utils.theme import Theme
 from utils.fonts import FontManager
 
 from components.equation import Equation
@@ -15,16 +16,25 @@ class EquationEditor(ScrollableFrame):
     # Placement
     __add_button_buffer = 0.05
 
-    def __init__(self, parent, width, **args):
-        super().__init__(parent, self.__entryConfig, **args)
+    def __init__(self, parent, width):
+        super().__init__(parent, 
+            self.__entryConfig,
+            borderwidth = 0,
+            highlightthickness = 0)
+        self.getCanvas().configure(bg = Theme.getInstance().getShade(2))
+        self.getInnerFrame().configure(bg = Theme.getInstance().getShade(2))
 
-        self.place(relwidth = width, 
+        self.place(relwidth = width,
             relheight = 1 - self.__add_button_buffer)
 
-        self.__entry_button = Button(parent,
+        self.__entry_button = tk.Button(parent,
             text = "+",
+            bg = Theme.getInstance().getShade(1),
+            activebackground = Theme.getInstance().getShade(3),
             font = FontManager.getInstance().getTextFont(),
-            command = self.__addEntry)
+            command = self.__addEntry,
+            borderwidth = 0,
+            highlightthickness = 0)
         self.__entry_button.place(
             rely = 1 - self.__add_button_buffer,
             relwidth = width,

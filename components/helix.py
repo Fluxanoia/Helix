@@ -67,16 +67,8 @@ class Helix:
         self.__root.config(menu = self.__menu)
 
     def __constructPanels(self):
-        self.__frame_editor = EquationEditor(self.__root,
-            self.__frame_split,
-            bg = '#757575',
-            borderwidth = 0,
-            highlightthickness = 0)
-        self.__frame_viewer = EquationViewer(self.__root,
-            self.__frame_split,
-            bg = '#505050',
-            borderwidth = 0,
-            highlightthickness = 0)
+        self.__frame_editor = EquationEditor(self.__root, self.__frame_split)
+        self.__frame_viewer = EquationViewer(self.__root, self.__frame_split)
 
     def run(self):
         self.__root.mainloop()

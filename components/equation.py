@@ -1,10 +1,10 @@
-from tkinter import Frame, Entry, Label, Button, StringVar, SE, SW, BOTH
+import tkinter as tk
 
 from utils.fonts import FontManager
 from utils.images import ImageManager
 from utils.parsing import Parser
 
-class Equation(Frame):
+class Equation(tk.Frame):
 
     # Function to be called on removal
     __remove_func = None
@@ -37,16 +37,16 @@ class Equation(Frame):
 
         font = FontManager.getInstance().getTextFont()
 
-        self.__entry_var = StringVar()
+        self.__entry_var = tk.StringVar()
         self.__entry_var.trace('w', self.__update)
-        self.__entry = Entry(self,
+        self.__entry = tk.Entry(self,
             font = font,
             textvariable = self.__entry_var)
         self.__entry.place(relx = self.__paddingx,
             rely = self.__paddingy,
             relwidth = 1 - self.__paddingx * 2)
 
-        self.__label = Label(self, text = "Testing!", font = font)
+        self.__label = tk.Label(self, text = "Testing!", font = font)
         self.__label.place(relx = self.__paddingx,
             rely = self.__paddingy * 2 + 0.25,
             relwidth = 1 - self.__paddingx * 2)
@@ -60,10 +60,10 @@ class Equation(Frame):
         self.__rightButtons = [self.__remove_button]
         self.__placeButtons()
 
-        self.pack(fill = BOTH, expand = True)
+        self.pack(fill = tk.BOTH, expand = True)
 
     def __createButton(self, command, img_path):
-        return Button(self,
+        return tk.Button(self,
             command = command,
             image = ImageManager.getInstance().getImage(
                 img_path,
@@ -77,7 +77,7 @@ class Equation(Frame):
             self.__placeButtonRight(self.__rightButtons[i], i)
 
     def __placeButtonLeft(self, button, count):
-        button.place(anchor = SW,
+        button.place(anchor = tk.SW,
             x = self.__button_size * count,
             relx = self.__paddingx * (count + 1),
             rely = 1 - self.__paddingy,
@@ -85,7 +85,7 @@ class Equation(Frame):
             h = self.__button_size)
 
     def __placeButtonRight(self, button, count = 0):
-        button.place(anchor = SE,
+        button.place(anchor = tk.SE,
             x = self.__button_size * count,
             relx = 1 - self.__paddingx * (count + 1),
             rely = 1 - self.__paddingy,
