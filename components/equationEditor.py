@@ -14,31 +14,26 @@ class EquationEditor(ScrollableFrame):
     __entries = []
 
     # Placement
-    __add_button_buffer = 0.05
+    __add_button_height = 0.05
 
     def __init__(self, parent, width):
-        super().__init__(parent, 
-            self.__entryConfig,
-            borderwidth = 0,
-            highlightthickness = 0)
-        self.getCanvas().configure(bg = Theme.getInstance().getShade(2))
-        self.getInnerFrame().configure(bg = Theme.getInstance().getShade(2))
+        super().__init__(parent, self.__entryConfig)
+        Theme.getInstance().configureEditor(self)
+        Theme.getInstance().configureEditor(self.getCanvas())
+        Theme.getInstance().configureEditor(self.getInnerFrame())
 
         self.place(relwidth = width,
-            relheight = 1 - self.__add_button_buffer)
+            relheight = 1 - self.__add_button_height)
 
         self.__entry_button = tk.Button(parent,
             text = "+",
-            bg = Theme.getInstance().getShade(1),
-            activebackground = Theme.getInstance().getShade(3),
-            font = FontManager.getInstance().getTextFont(),
-            command = self.__addEntry,
-            borderwidth = 0,
-            highlightthickness = 0)
+            command = self.__addEntry)
+        Theme.getInstance().configureEditorButton(self.__entry_button)
+        FontManager.getInstance().configureText(self.__entry_button)
         self.__entry_button.place(
-            rely = 1 - self.__add_button_buffer,
+            rely = 1 - self.__add_button_height,
             relwidth = width,
-            relheight = self.__add_button_buffer)
+            relheight = self.__add_button_height)
 
     def __addEntry(self):
         self.__entries.append(Equation(

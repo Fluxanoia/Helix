@@ -6,6 +6,11 @@ class FontManager:
 
     __textFont = None
 
+    def getTextFont(self):
+        return self.__textFont
+    def configureText(self, w):
+        w.configure(font = self.getTextFont())
+
     @staticmethod
     def getInstance(root = None):
         if FontManager.__instance is None:
@@ -17,7 +22,4 @@ class FontManager:
             raise Exception("Invalid initialistion of singleton.")
         else:
             FontManager.__instance = self
-            self.__textFont = font.Font(root, size=16)
-
-    def getTextFont(self):
-        return self.__textFont
+            self.__textFont = font.Font(root, size = 16)

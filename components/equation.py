@@ -35,18 +35,16 @@ class Equation(tk.Frame):
 
         self.__remove_func = remove_func
 
-        font = FontManager.getInstance().getTextFont()
-
         self.__entry_var = tk.StringVar()
         self.__entry_var.trace('w', self.__update)
-        self.__entry = tk.Entry(self,
-            font = font,
-            textvariable = self.__entry_var)
+        self.__entry = tk.Entry(self, textvariable = self.__entry_var)
+        FontManager.getInstance().configureText(self.__entry)
         self.__entry.place(relx = self.__paddingx,
             rely = self.__paddingy,
             relwidth = 1 - self.__paddingx * 2)
 
-        self.__label = tk.Label(self, text = "Testing!", font = font)
+        self.__label = tk.Label(self, text = "Testing!")
+        FontManager.getInstance().configureText(self.__label)
         self.__label.place(relx = self.__paddingx,
             rely = self.__paddingy * 2 + 0.25,
             relwidth = 1 - self.__paddingx * 2)

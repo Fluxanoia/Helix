@@ -32,29 +32,24 @@ class EquationViewer(tk.Frame):
         super().__init__(parent,
             borderwidth = 0,
             highlightthickness = 0)
-        self.bg = Theme.getInstance().getShade(0)
+        Theme.getInstance().configureViewer(self)
 
         self.__tab_bar = tk.Frame(self,
-            bg = Theme.getInstance().getShade(1),
-            height = self.__bar_height,
-            borderwidth = 0,
-            highlightthickness = 0)
+            height = self.__bar_height)
+        Theme.getInstance().configureTabBar(self.__tab_bar)
         self.__tab_add_button = tk.Button(self.__tab_bar,
             text = "+",
-            bg = Theme.getInstance().getShade(1),
-            activebackground = Theme.getInstance().getShade(3),
-            font = FontManager.getInstance().getTextFont(),
             command = self.__addTab,
             width = 3)
+        Theme.getInstance().configureTabButton(self.__tab_add_button)
+        FontManager.getInstance().configureText(self.__tab_add_button)
         self.__tab_bar.pack(side = tk.TOP, fill = tk.X)
         self.__addTab()
         # self.__select()
 
         self.__figure = plt.figure()
         self.__axes = Axes3D(self.__figure)
-
-        self.__figure.patch.set_facecolor(self.bg)
-        self.__axes.set_facecolor(self.bg)
+        Theme.getInstance().configureViewerFace(self.__figure.patch, self.__axes)
 
         self.angle = 0
         x, y = np.meshgrid(np.linspace(-6, 6, 30), np.linspace(-6, 6, 30))
