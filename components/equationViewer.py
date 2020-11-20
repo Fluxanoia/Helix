@@ -1,10 +1,9 @@
 import tkinter as tk
 
-import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d.axes3d import Axes3D
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from mpl_toolkits.mplot3d.axes3d import Axes, Axes3D
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from utils.theme import Theme
 from utils.fonts import FontManager
@@ -18,7 +17,8 @@ class EquationViewer(tk.Frame):
     __bar_height = 30
 
     __figure = None
-    __axes = None
+    __axes2d = None
+    __axes3d = None
 
     __tab_bar = None
     __tabs = []
@@ -26,7 +26,6 @@ class EquationViewer(tk.Frame):
     __tab_add_button = None
 
     __canvas = None
-    __toolbar = None
 
     def __init__(self, parent, width):
         super().__init__(parent,
@@ -45,28 +44,24 @@ class EquationViewer(tk.Frame):
         FontManager.getInstance().configureText(self.__tab_add_button)
         self.__tab_bar.pack(side = tk.TOP, fill = tk.X)
         self.__addTab()
-        # self.__select()
 
-        self.__figure = plt.figure()
-        self.__axes = Axes3D(self.__figure)
-        Theme.getInstance().configureViewerFace(self.__figure.patch, self.__axes)
-
-        self.angle = 0
-        x, y = np.meshgrid(np.linspace(-6, 6, 30), np.linspace(-6, 6, 30))
-        z = np.cos(np.sqrt(x ** 2 + y ** 2))
-        # self.__axes.plot_wireframe(x, y, z)
-
+        self.__figure = plt.figure(0, clear = True)
+        self.__axes2d = Axes(self.__figure, (0.1, 0.1, 0.8, 0.8), label = "Viewer2D")
+        self.__axes3d = Axes3D(self.__figure, (0.1, 0.1, 0.8, 0.8), label = "Viewer3D")
+        Theme.getInstance().configureFigure(self.__figure)
+        Theme.getInstance().configurePlot2D(self.__axes2d)
+        Theme.getInstance().configurePlot3D(self.__axes3d)
+        self.__figure.add_axes(self.__axes2d)
+        self.__figure.add_axes(self.__axes3d)
         self.__canvas = FigureCanvasTkAgg(self.__figure,
             master = self)
-        self.__canvas.draw()
-        self.__toolbar = NavigationToolbar2Tk(self.__canvas, self, pack_toolbar = False)
-        self.__toolbar.update()
-
-        self.__canvas.mpl_connect("key_press_event", self.__rotateAxis)
         self.__canvas.mpl_connect('button_press_event', self.__focus)
-
-        self.__toolbar.pack(side = tk.BOTTOM, fill = tk.X)
+        self.__canvas.draw()
         self.__canvas.get_tk_widget().pack(side = tk.TOP, fill = tk.BOTH, expand = 1)
+
+        self.__select(self.__tabs[0])
+
+        # self.__canvas.mpl_connect("key_press_event", self.__rotateAxis)
 
         self.place(relx = width,
             relwidth = 1 - width,
@@ -83,14 +78,26 @@ class EquationViewer(tk.Frame):
             t.pack_forget()
         self.__tab_add_button.pack_forget()
 
-        tab = Tab(self.__tab_bar)
+        tab = Tab(self.__tab_bar, self.__select)
 
         self.__tabs.append(tab)
         for t in self.__tabs:
             t.pack(side = tk.LEFT, fill = tk.NONE)
         self.__tab_add_button.pack(side = tk.LEFT, fill = tk.Y)
 
-    def __rotateAxis(self, _event):
-        self.__axes.view_init(30, self.angle)
-        self.angle += 10
-        self.__update()
+    def __select(self, t):
+        self.__axes2d.clear()
+        self.__axes2d.set_visible(False)
+        self.__axes3d.clear()
+        self.__axes3d.set_visible(False)
+        for tab in self.__tabs:
+            if tab == t:
+                tab.configure(relief = tk.SUNKEN)
+            else:
+                tab.configure(relief = tk.RAISED)
+        t.draw(self.__axes2d, self.__axes3d)
+
+    # def __rotateAxis(self, _event):
+    #     self.__axes.view_init(30, self.angle)
+    #     self.angle += 10
+    #     self.__update()

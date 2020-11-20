@@ -10,7 +10,8 @@ class Theme:
 
     __viewer_body       = '#202020'
 
-    __viewer_face_color = '#202020'
+    __viewer_face_color  = '#202020'
+    __viewer_spine_color = '#FFFFFF'
 
     __tab_body = '#606060'
 
@@ -41,11 +42,22 @@ class Theme:
         w.configure(bg = self.getViewerBody())
         self.removeBorder(w)
 
-    def getViewerFaceColor(self):
+    def getViewerFace(self):
         return self.__viewer_face_color
-    def configureViewerFace(self, f, a):
-        f.set_facecolor(self.getViewerFaceColor())
-        a.set_facecolor(self.getViewerFaceColor())
+    def getViewerSpine(self):
+        return self.__viewer_spine_color
+    def configureFigure(self, f):
+        f.patch.set_facecolor(self.getViewerFace())
+    def configurePlot2D(self, a):
+        a.set_facecolor(self.getViewerFace())
+        for s in a.spines:
+            a.spines[s].set_color(self.getViewerSpine())
+        a.xaxis.label.set_color(self.getViewerSpine())
+        a.yaxis.label.set_color(self.getViewerSpine())
+        a.tick_params(axis='x', colors = self.getViewerSpine())
+        a.tick_params(axis='y', colors = self.getViewerSpine())
+    def configurePlot3D(self, a):
+        a.set_facecolor(self.getViewerFace())
 
     def getTabBody(self):
         return self.__tab_body
