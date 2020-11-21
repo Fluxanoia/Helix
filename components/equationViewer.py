@@ -28,9 +28,7 @@ class EquationViewer(tk.Frame):
     __canvas = None
 
     def __init__(self, parent, width):
-        super().__init__(parent,
-            borderwidth = 0,
-            highlightthickness = 0)
+        super().__init__(parent)
         Theme.getInstance().configureViewer(self)
 
         self.__tab_bar = tk.Frame(self,

@@ -3,7 +3,7 @@ from tkinter.messagebox import showinfo
 
 from utils.fonts import FontManager
 from utils.images import ImageManager
-from utils.parsing import Parser
+from utils.parsing import Parser, Parsed
 
 from components.equationEditor import EquationEditor
 from components.equationViewer import EquationViewer

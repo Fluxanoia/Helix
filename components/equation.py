@@ -2,7 +2,7 @@ import tkinter as tk
 
 from utils.fonts import FontManager
 from utils.images import ImageManager
-from utils.parsing import Parser
+from utils.parsing import Parsed
 
 class Equation(tk.Frame):
 
@@ -29,6 +29,9 @@ class Equation(tk.Frame):
     __paddingx = 0.02
     __paddingy = 0.04
     __bar_width = 0.1
+
+    # Parsing
+    __parsed = None
 
     def __init__(self, parent, remove_func):
         super().__init__(parent, bg = parent["bg"], height = 110)
@@ -91,7 +94,8 @@ class Equation(tk.Frame):
             h = self.__button_size)
 
     def __update(self, *_args):
-        self.label(Parser.getInstance().parse(self.getText()))
+        self.__parsed = Parsed(self.getText())
+        self.label("...")
 
     def __remove(self):
         self.pack_forget()
