@@ -4,9 +4,12 @@ from utils.fonts import FontManager
 from utils.images import ImageManager
 from utils.parsing import Parsed
 
+from components.plot import Plot
+
 class Equation(tk.Frame):
 
-    # Function to be called on removal
+    # Callback
+    __add_func = None
     __remove_func = None
 
     # Main Widgets
@@ -32,10 +35,12 @@ class Equation(tk.Frame):
 
     # Parsing
     __parsed = None
+    __plot = None
 
-    def __init__(self, parent, remove_func):
+    def __init__(self, parent, add_func, remove_func):
         super().__init__(parent, bg = parent["bg"], height = 110)
 
+        self.__add_func = add_func
         self.__remove_func = remove_func
 
         self.__entry_var = tk.StringVar()
@@ -46,7 +51,7 @@ class Equation(tk.Frame):
             rely = self.__paddingy,
             relwidth = 1 - self.__paddingx * 2)
 
-        self.__label = tk.Label(self, text = "Testing!")
+        self.__label = tk.Label(self, text = "")
         FontManager.getInstance().configureText(self.__label)
         self.__label.place(relx = self.__paddingx,
             rely = self.__paddingy * 2 + 0.25,
@@ -94,15 +99,33 @@ class Equation(tk.Frame):
             h = self.__button_size)
 
     def __update(self, *_args):
+        self.__plot = None
         self.__parsed = Parsed(self.getText())
-        self.label("...")
+        blocks = self.__parsed.getBlocks()
+        if self.__parsed.hasError():
+            self.label(self.__parsed.getError())
+        elif len(blocks) == 0:
+            self.label("")
+        elif len(blocks) == 1:
+            free_vars = len(self.__parsed.getVariables())
+            if free_vars == 0:
+                self.label(str(blocks[0].evalf()))
+            elif free_vars == 1:
+                self.__plot = Plot(blocks[0], list(self.__parsed.getVariables()))
+                self.label("Plotting...")
+                self.__add_func()
+        elif len(blocks) == 2:
+            self.label("...")
 
     def __remove(self):
         self.pack_forget()
         self.__remove_func(self)
 
+    def label(self, text):
+        self.__label.config(text = text)
+
     def getText(self):
         return self.__entry.get()
 
-    def label(self, text):
-        self.__label.config(text = text)
+    def getPlot(self):
+        return self.__plot

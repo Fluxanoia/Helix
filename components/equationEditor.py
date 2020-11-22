@@ -8,6 +8,9 @@ from components.scrollableFrame import ScrollableFrame
 
 class EquationEditor(ScrollableFrame):
 
+    # Plotting
+    __plotter = None
+
     # Entries
     __entry_width = None
     __entry_button = None
@@ -16,11 +19,13 @@ class EquationEditor(ScrollableFrame):
     # Placement
     __add_button_height = 0.05
 
-    def __init__(self, parent, width):
+    def __init__(self, parent, width, plotter):
         super().__init__(parent, self.__entryConfig)
         Theme.getInstance().configureEditor(self)
         Theme.getInstance().configureEditor(self.getCanvas())
         Theme.getInstance().configureEditor(self.getInnerFrame())
+
+        self.__plotter = plotter
 
         self.place(relwidth = width,
             relheight = 1 - self.__add_button_height)
@@ -38,11 +43,19 @@ class EquationEditor(ScrollableFrame):
     def __addEntry(self):
         self.__entries.append(Equation(
             self.getInnerFrame(),
+            self.__update,
             self.__entries.remove))
         self.__entries[-1].configure(width = self.__entry_width)
-
 
     def __entryConfig(self, width):
         self.__entry_width = width
         for e in self.__entries:
             e.configure(width = self.__entry_width)
+
+    def __update(self):
+        plots = []
+        for e in self.__entries:
+            plot = e.getPlot()
+            if plot is not None:
+                plots.append(plot)
+        self.__plotter(plots)

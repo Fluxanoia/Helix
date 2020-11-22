@@ -49,15 +49,14 @@ class EquationViewer(tk.Frame):
         Theme.getInstance().configureFigure(self.__figure)
         Theme.getInstance().configurePlot2D(self.__axes2d)
         Theme.getInstance().configurePlot3D(self.__axes3d)
-        self.__figure.add_axes(self.__axes2d)
-        self.__figure.add_axes(self.__axes3d)
+
+        self.__select(self.__tabs[0])
+
         self.__canvas = FigureCanvasTkAgg(self.__figure,
             master = self)
         self.__canvas.mpl_connect('button_press_event', self.__focus)
         self.__canvas.draw()
         self.__canvas.get_tk_widget().pack(side = tk.TOP, fill = tk.BOTH, expand = 1)
-
-        self.__select(self.__tabs[0])
 
         # self.__canvas.mpl_connect("key_press_event", self.__rotateAxis)
 
@@ -83,19 +82,27 @@ class EquationViewer(tk.Frame):
             t.pack(side = tk.LEFT, fill = tk.NONE)
         self.__tab_add_button.pack(side = tk.LEFT, fill = tk.Y)
 
+    def __draw(self):
+        ax = self.__selected_tab.draw(self.__axes2d, self.__axes3d)
+        if not (ax is None or ax in self.__figure.get_axes()):
+            self.__figure.clf()
+            self.__figure.add_axes(ax)
+        if not self.__canvas is None:
+            self.__canvas.draw()
+
     def __select(self, t):
+        self.__selected_tab = t
         self.__axes2d.clear()
-        self.__axes2d.set_visible(False)
         self.__axes3d.clear()
-        self.__axes3d.set_visible(False)
+        self.__figure.clf()
         for tab in self.__tabs:
             if tab == t:
                 tab.configure(relief = tk.SUNKEN)
             else:
                 tab.configure(relief = tk.RAISED)
-        t.draw(self.__axes2d, self.__axes3d)
+        self.__draw()
 
-    # def __rotateAxis(self, _event):
-    #     self.__axes.view_init(30, self.angle)
-    #     self.angle += 10
-    #     self.__update()
+    def plot(self, plots):
+        for tab in self.__tabs:
+            tab.plot(plots)
+        self.__draw()
