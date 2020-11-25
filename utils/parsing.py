@@ -19,17 +19,17 @@ class Parser:
     @staticmethod
     def getInstance():
         if Parser.__instance is None:
-            Parser()
+            raise Exception("No instance of Parser.")
         return Parser.__instance
 
     def __init__(self):
         if Parser.__instance is not None:
-            raise Exception("Invalid initialistion of singleton.")
+            raise Exception("Invalid initialistion of Parser.")
         Parser.__instance = self
 
     def parse(self, expr):
-        return parse_expr(expr,
-            transformations = self.__transformations)
+        return sympy.sympify(parse_expr(expr,
+            transformations = self.__transformations))
 
 class ParseMode(enum.Enum):
     NORMAL      = 0
@@ -45,6 +45,7 @@ class Parsed:
     __symbols = []
     __binds = None
 
+    __value = None
     __error = None
 
     def __init__(self, expr):
@@ -60,7 +61,7 @@ class Parsed:
             if mode == ParseMode.NORMAL:
                 if s in self.__comparatives:
                     if comp is not None and comp != s:
-                        self.__error = "Error."
+                        self.__error = "Inconsistent comparatives."
                         return
                     comp = s
                     blocks.append(curr_norm)
@@ -81,28 +82,37 @@ class Parsed:
         if len(curr_norm) != 0:
             blocks.append(curr_norm)
         if len(curr_comp) != 0:
-            self.__error = "Error."
+            self.__error = "Unmatched braces."
             return
 
         for i in range(len(blocks)):
             try:
                 blocks[i] = Parser.getInstance().parse(blocks[i])
             except SyntaxError:
+                self.__error = "Syntax error."
+                return
+            except:
                 self.__error = "Error."
                 return
 
         if len(blocks) == 0:
-            return
+            return None
         elif len(blocks) == 1:
             self.__comparative = None
             self.__blocks = blocks
             self.__symbols = blocks[0].atoms(sympy.Symbol)
             self.__binds = None
+            if len(self.__symbols) == 0:
+                try:
+                    self.__value = blocks[0].evalf()
+                except TypeError:
+                    self.__value = None
+                    self.__error = "Evaluation error."
         elif len(blocks) == 2:
-            return
+            return None
         else:
-            self.__error = "Error."
-            return
+            self.__error = "Too many chained expressions."
+            return None
 
     def getComparative(self):
         return self.__comparative
@@ -115,6 +125,11 @@ class Parsed:
 
     def getBinding(self):
         return self.__binds
+
+    def hasValue(self):
+        return self.__value is not None
+    def getValue(self):
+        return self.__value
 
     def hasError(self):
         return self.__error is not None

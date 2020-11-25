@@ -83,11 +83,10 @@ class Theme:
     @staticmethod
     def getInstance():
         if Theme.__instance is None:
-            Theme()
+            raise Exception("No instance of Theme.")
         return Theme.__instance
 
     def __init__(self):
         if Theme.__instance is not None:
-            raise Exception("Invalid initialistion of singleton.")
-        else:
-            Theme.__instance = self
+            raise Exception("Invalid initialistion of Theme.")
+        Theme.__instance = self

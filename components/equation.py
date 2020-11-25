@@ -3,6 +3,7 @@ import tkinter as tk
 from utils.fonts import FontManager
 from utils.images import ImageManager
 from utils.parsing import Parsed
+from utils.delay import DelayTracker
 
 from components.plot import Plot
 
@@ -23,6 +24,8 @@ class Equation(tk.Frame):
 
     # Entry tracker
     __entry_var = None
+    __debounce_id = None
+    __debounce_delay = 250
 
     # Button Alignments
     __leftButtons = []
@@ -44,7 +47,7 @@ class Equation(tk.Frame):
         self.__remove_func = remove_func
 
         self.__entry_var = tk.StringVar()
-        self.__entry_var.trace('w', self.__update)
+        self.__entry_var.trace('w', self.__debounce_update)
         self.__entry = tk.Entry(self, textvariable = self.__entry_var)
         FontManager.getInstance().configureText(self.__entry)
         self.__entry.place(relx = self.__paddingx,
@@ -98,7 +101,16 @@ class Equation(tk.Frame):
             w = self.__button_size,
             h = self.__button_size)
 
+    def __debounce_update(self, *_args):
+        if self.__debounce_id is not None:
+            DelayTracker.getInstance().endDelay(self, self.__debounce_id)
+        self.__debounce_id = self.after(self.__debounce_delay, self.__update)
+        DelayTracker.getInstance().addDelay(self, self.__debounce_id)
+
     def __update(self, *_args):
+        DelayTracker.getInstance().removeDelay(self, self.__debounce_id)
+        self.__debounce_id = None
+
         self.__plot = None
         self.__parsed = Parsed(self.getText())
         blocks = self.__parsed.getBlocks()
@@ -109,7 +121,7 @@ class Equation(tk.Frame):
         elif len(blocks) == 1:
             free_vars = len(self.__parsed.getVariables())
             if free_vars == 0:
-                self.label(str(blocks[0].evalf()))
+                self.label(self.__parsed.getValue())
             elif free_vars == 1:
                 self.__plot = Plot(blocks[0], list(self.__parsed.getVariables()))
                 self.label("Plotting...")

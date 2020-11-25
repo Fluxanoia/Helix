@@ -18,14 +18,16 @@ class Tab(tk.Button):
         self.__plots = plots
 
     def draw(self, a2d, _a3d):
-        if len(self.__plots) > 0:
-            if self.__plots[0].getDimensionality() == 2:
-                a2d.clear()
-                a2d.set_visible(True)
-                x = [ (i - 100) / 10 for i in range(201) ]
-                a2d.plot(x, self.__plots[0].getPlot2D(x))
-                return a2d
-        return None
+        a2d.clear()
+        a2d.set_visible(True)
+        for p in self.__plots:
+            if p.getDimensionality() == 2:
+                plot = p.getPlot2D([ (i - 50) / 10 for i in range(101) ])
+                for i in range(len(plot[0])):
+                    a2d.plot(plot[0][i], plot[1][i])
+                if len(plot[3]) > 0:
+                    a2d.vlines(plot[3], plot[4], plot[5], 'r', 'dashed')
+        return a2d
 
     # def __rotateAxis(self, _event):
     #     self.__axes.view_init(30, self.angle)

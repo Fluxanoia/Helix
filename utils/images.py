@@ -11,15 +11,14 @@ class ImageManager:
     @staticmethod
     def getInstance():
         if ImageManager.__instance is None:
-            ImageManager()
+            raise Exception("No instance of ImageManager.")
         return ImageManager.__instance
 
     def __init__(self):
         if ImageManager.__instance is not None:
-            raise Exception("Invalid initialistion of singleton.")
-        else:
-            ImageManager.__instance = self
-            self.__dir = os.path.join(os.path.dirname(__file__), '..') + "\\images\\"
+            raise Exception("Invalid initialistion of ImageManager.")
+        ImageManager.__instance = self
+        self.__dir = os.path.join(os.path.dirname(__file__), '..') + "\\images\\"
 
     def getImage(self, name, width = None, height = None):
         name = self.__dir + name

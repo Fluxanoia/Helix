@@ -62,8 +62,10 @@ confidence=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
-disable=consider-using-enumerate
-        too-few-public-methods
+disable=no-else-return,
+        bare-except,
+        consider-using-enumerate,
+        too-few-public-methods,
         too-many-ancestors,
         invalid-name,
         missing-function-docstring,

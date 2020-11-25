@@ -3,7 +3,9 @@ from tkinter.messagebox import showinfo
 
 from utils.fonts import FontManager
 from utils.images import ImageManager
-from utils.parsing import Parser, Parsed
+from utils.theme import Theme
+from utils.parsing import Parser
+from utils.delay import DelayTracker
 
 from components.equationEditor import EquationEditor
 from components.equationViewer import EquationViewer
@@ -16,7 +18,9 @@ class Helix:
     # Managers
     __fonts = FontManager(__root)
     __images = ImageManager()
+    __theme = Theme()
     __parser = Parser()
+    __delayTracker = DelayTracker()
 
     # Dimensions
     __width = 1280
@@ -44,6 +48,7 @@ class Helix:
             (self.__width, self.__height,
             (self.__root.winfo_screenwidth() / 2) - (self.__width / 2),
             (self.__root.winfo_screenheight() / 2) - (self.__height / 2)))
+        self.__root.wm_protocol("WM_DELETE_WINDOW", self.__root.quit)
 
     def __constructMenu(self):
         # File Menu
@@ -51,7 +56,7 @@ class Helix:
         self.__file_menu.add_command(label = "Open")
         self.__file_menu.add_command(label = "Save")
         self.__file_menu.add_separator()
-        self.__file_menu.add_command(label = "Exit", command = Tk.quit)
+        self.__file_menu.add_command(label = "Exit", command = self.__root.quit)
         self.__menu.add_cascade(label = "File", menu = self.__file_menu)
         # Edit Menu
         self.__edit_menu.add_command(label = "Cut")
