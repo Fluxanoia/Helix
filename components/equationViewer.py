@@ -20,6 +20,10 @@ class EquationViewer(tk.Frame):
     __axes2d = None
     __axes3d = None
 
+    __free_vars = []
+    __variable_info = {}
+    __variable_selector = None
+
     __tab_bar = None
     __tabs = []
     __selected_tab = None
@@ -42,6 +46,13 @@ class EquationViewer(tk.Frame):
         FontManager.getInstance().configureText(self.__tab_add_button)
         self.__tab_bar.pack(side = tk.TOP, fill = tk.X)
         self.__addTab()
+
+        self.__variable_selector = tk.Frame(self)
+        Theme.getInstance().configureVariableSelector(self.__variable_selector)
+        text = tk.Label(self.__variable_selector, text = "Variables")
+        Theme.getInstance().configureVariableSelectorText(text)
+        text.pack(padx = 5, pady = 5)
+        self.__variable_selector.pack(side = tk.RIGHT, anchor = tk.NE, fill = tk.Y)
 
         self.__figure = plt.figure(0, clear = True)
         self.__axes2d = Axes(self.__figure, (0.1, 0.1, 0.8, 0.8), label = "Viewer2D")
@@ -102,7 +113,52 @@ class EquationViewer(tk.Frame):
                 tab.configure(relief = tk.RAISED)
         self.__draw()
 
+    def __variable_check(self, var):
+        print("Checking " + str(var) + " - " + str(self.__variable_info[var][0].get()))
+
     def plot(self, plots):
+        self.__free_vars = set()
+        for p in plots:
+            self.__free_vars = self.__free_vars.union(set(p.getFreeVariables()))
+        self.__free_vars = list(self.__free_vars)
+        self.__free_vars.sort(key = str)
+
+        repack = False
+        for free_var in self.__free_vars:
+            exists = False
+            for key in self.__variable_info:
+                exists = free_var == key
+                if exists: break
+            if not exists:
+                var = tk.BooleanVar()
+                self.__variable_info[free_var] = (var,
+                    tk.Checkbutton(self.__variable_selector,
+                        text = str(free_var),
+                        variable = var,
+                        onvalue = True,
+                        offvalue = False,
+                        command =
+                            lambda fv = free_var: self.__variable_check(fv)))
+                Theme.getInstance().configureVariableSelectorCheckbox(
+                    self.__variable_info[free_var][1])
+                repack = True
+
+        to_remove = [k for k in self.__variable_info
+            if not k in self.__free_vars]
+        for k in to_remove:
+            self.__variable_info[k][1].pack_forget()
+            self.__variable_info.pop(k)
+            repack = True
+
+        if repack:
+            keys = list(self.__variable_info.keys())
+            keys.sort(key = str)
+            for k in self.__variable_info:
+                self.__variable_info[k][1].pack_forget()
+            for k in keys:
+                self.__variable_info[k][1].pack(side = tk.TOP, anchor = tk.NW, fill = tk.X)
+
         for tab in self.__tabs:
-            tab.plot(plots)
+            tab.plot(plots, self.__free_vars)
+
         self.__draw()

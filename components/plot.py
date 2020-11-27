@@ -1,4 +1,7 @@
-import sympy
+import numpy as np
+
+from utils.maths import updateBounds
+
 class Plot:
 
     __expr = None
@@ -8,68 +11,75 @@ class Plot:
         self.__expr = expr
         self.__free_vars = free_vars
 
+    def evaluate(self, subs):
+        value = None
+        try:
+            value = self.__expr.evalf(subs = subs)
+        except: return None
+        if value is None: return None
+        if not value.is_Number or value.is_infinite:
+            return None
+        return value
+
+    def getFreeVariables(self):
+        return self.__free_vars
+
     def getDimensionality(self):
         return len(self.__free_vars) + 1
 
-    def __breakPlot2D(self, x, y, xs, ys):
+    def __breakSection(self, x, xs):
         if len(x) > 0:
             xs.append(x)
-            ys.append(y)
             x = []
-            y = []
+        return x, xs
+
+    def __breakSection2D(self, x, y, xs, ys):
+        x, xs = self.__breakSection(x, xs)
+        y, ys = self.__breakSection(y, ys)
         return x, y, xs, ys
 
-    def getPlot2D(self, values):
+    def getPlot2D(self, xmin, xmax, count):
         if self.getDimensionality() != 2:
             raise ValueError("No 2D values of " \
                 + str(self.getDimensionality()) \
                 + "D plot")
 
+        step = (xmax - xmin) / (count - 1)
+        values = xmin + step * np.array(range(count))
         xs = []
         ys = []
-        undef = []
-        asymp = []
+        undefs = []
         ymin = None
         ymax = None
 
         x = []
         y = []
+        undef = []
         var = self.__free_vars[0]
-        for i in values:
-            value = None
-            try:
-                value = self.__expr.evalf(subs = { var: i })
-                if not value.is_Number:
-                    value = None
-            except:
-                plus = sympy.limit(self.__expr, var, i, '+')
-                minus = sympy.limit(self.__expr, var, i, '-')
-                if not (plus.is_Number and minus.is_Number):
-                    value = None
-                    asymp.append(i)
-                elif plus == minus:
-                    value = plus
-                    undef.append(i)
-                else:
-                    value = None
-                    asymp.append(i)
+        for i in range(len(values)):
+            value = self.evaluate({ var: values[i] })
             if value is None:
-                x, y, xs, ys = self.__breakPlot2D(x, y, xs, ys)
+                undef.append(values[i])
+                x, y, xs, ys = self.__breakSection2D(x, y, xs, ys)
             else:
-                if ymin is None or ymax is None:
-                    ymin = value
-                    ymax = value
-                elif value < ymin:
-                    ymin = value
-                elif value > ymax:
-                    ymax = value
-                x.append(i)
+                undef, undefs = self.__breakSection(undef, undefs)
+                x.append(values[i])
                 y.append(value)
-        x, y, xs, ys = self.__breakPlot2D(x, y, xs, ys)
-        if ymin is None or ymax is None:
-            ymin = 0
-            ymax = 0
-        return (xs, ys, undef, asymp, float(ymin), float(ymax))
+                ymin, ymax = updateBounds(ymin, ymax, value)
+        undef, undefs = self.__breakSection(undef, undefs)
+        x, y, xs, ys = self.__breakSection2D(x, y, xs, ys)
+        ymin, ymax = updateBounds(ymin, ymax, 0)
+        asymp = []
+        for u in undefs:
+            asymp.append(u[0])
+            if len(u) > 1: asymp.append(u[-1])
+        if len(asymp) > 0 and asymp[0] == xmin \
+            and self.evaluate({ var: xmin - step }) is None:
+            asymp.pop(0)
+        if len(asymp) > 0 and asymp[-1] == xmax \
+            and self.evaluate({ var: xmax + step }) is None:
+            asymp.pop(-1)
+        return xs, ys, asymp, float(ymin), float(ymax)
 
     def getPlot3D(self, x_values, y_values):
         if self.getDimensionality() != 3:

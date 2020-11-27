@@ -14,10 +14,14 @@ class Theme:
     __viewer_spine_color = '#FFFFFF'
 
     __tab_body = '#606060'
-
+    
     __tab_button_body        = '#707070'
     __tab_button_body_active = '#808080'
     __tab_button_text        = '#FFFFFF'
+
+    __variable_selector_body     = '#606060'
+    __variable_selector_text     = '#FFFFFF'
+    __variable_selector_checkbox = '#303030'
 
     def getEditorBody(self):
         return self.__editor_body
@@ -75,6 +79,23 @@ class Theme:
         w.configure(bg = self.getTabButtonBody(),
             activebackground = self.getTabButtonBodyActive(),
             foreground = self.getTabButtonText())
+
+    def getVariableSelectorBody(self):
+        return self.__variable_selector_body
+    def getVariableSelectorText(self):
+        return self.__variable_selector_text
+    def getVariableSelectorCheckbox(self):
+        return self.__variable_selector_checkbox
+    def configureVariableSelector(self, w):
+        w.configure(bg = self.getVariableSelectorBody())
+        self.removeBorder(w)
+    def configureVariableSelectorText(self, w):
+        w.configure(bg = self.getVariableSelectorBody(),
+            foreground = self.getVariableSelectorText())
+    def configureVariableSelectorCheckbox(self, w):
+        w.configure(bg = self.getVariableSelectorBody(),
+            foreground = self.getVariableSelectorText(),
+            selectcolor = self.getVariableSelectorCheckbox())
 
     def removeBorder(self, w):
         w.configure(borderwidth = 0,
