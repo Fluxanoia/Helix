@@ -63,8 +63,7 @@ class EquationViewer(tk.Frame):
 
         self.__select(self.__tabs[0])
 
-        self.__canvas = FigureCanvasTkAgg(self.__figure,
-            master = self)
+        self.__canvas = FigureCanvasTkAgg(self.__figure, master = self)
         self.__canvas.mpl_connect('button_press_event', self.__focus)
         self.__canvas.draw()
         self.__canvas.get_tk_widget().pack(side = tk.TOP, fill = tk.BOTH, expand = 1)
@@ -94,6 +93,9 @@ class EquationViewer(tk.Frame):
         self.__tab_add_button.pack(side = tk.LEFT, fill = tk.Y)
 
     def __draw(self):
+        self.__axes2d.clear()
+        self.__axes3d.clear()
+        self.__figure.clf()
         ax = self.__selected_tab.draw(self.__axes2d, self.__axes3d)
         if not (ax is None or ax in self.__figure.get_axes()):
             self.__figure.clf()
@@ -103,9 +105,6 @@ class EquationViewer(tk.Frame):
 
     def __select(self, t):
         self.__selected_tab = t
-        self.__axes2d.clear()
-        self.__axes3d.clear()
-        self.__figure.clf()
         for tab in self.__tabs:
             if tab == t:
                 tab.configure(relief = tk.SUNKEN)
@@ -114,7 +113,11 @@ class EquationViewer(tk.Frame):
         self.__draw()
 
     def __variable_check(self, var):
-        print("Checking " + str(var) + " - " + str(self.__variable_info[var][0].get()))
+        if self.__variable_info[var][0].get():
+            self.__selected_tab.addAxis(var)
+        else:
+            self.__selected_tab.removeAxis(var)
+        self.__draw()
 
     def plot(self, plots):
         self.__free_vars = set()

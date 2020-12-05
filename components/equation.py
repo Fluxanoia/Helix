@@ -122,9 +122,9 @@ class Equation(tk.Frame):
             free_vars = len(self.__parsed.getVariables())
             if free_vars == 0:
                 self.label(self.__parsed.getValue())
-            elif free_vars == 1:
+            else:
                 self.__plot = Plot(blocks[0], list(self.__parsed.getVariables()))
-                self.label("Plotting...")
+                self.label(str(self.__parsed.getVariables()))
                 self.__add_func()
         elif len(blocks) == 2:
             self.label("...")
