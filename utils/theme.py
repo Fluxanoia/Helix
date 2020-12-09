@@ -14,10 +14,13 @@ class Theme:
     __viewer_spine_color = '#FFFFFF'
 
     __tab_body = '#606060'
-    
+
     __tab_button_body        = '#707070'
     __tab_button_body_active = '#808080'
     __tab_button_text        = '#FFFFFF'
+
+    __tab_mode_selector_button_body = '#606060'
+    __tab_mode_selector_text        = '#FFFFFF'
 
     __variable_selector_body     = '#606060'
     __variable_selector_text     = '#FFFFFF'
@@ -79,6 +82,20 @@ class Theme:
         w.configure(bg = self.getTabButtonBody(),
             activebackground = self.getTabButtonBodyActive(),
             foreground = self.getTabButtonText())
+
+    def getTabModeSelectorButtonBody(self):
+        return self.__tab_mode_selector_button_body
+    def getTabModeSelectorText(self):
+        return self.__tab_mode_selector_text
+    def configureTabModeSelector(self, w):
+        w.configure(bg = self.getViewerBody())
+        self.removeBorder(w)
+    def configureTabModeSelectorLabel(self, w):
+        w.configure(bg = self.getViewerBody(),
+            foreground = self.getTabButtonText())
+    def configureTabModeSelectorButton(self, w):
+        w.configure(bg = self.getTabModeSelectorButtonBody(),
+            foreground = self.getTabModeSelectorText())
 
     def getVariableSelectorBody(self):
         return self.__variable_selector_body

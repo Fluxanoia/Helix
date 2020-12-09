@@ -70,7 +70,7 @@ class Plot:
                 x.append(values[i])
                 y.append(value)
                 ymin, ymax = updateBounds(ymin, ymax, value)
-                
+
         undef, undefs = self.__breakSection(undef, undefs)
         x, y, xs, ys = self.__breakSection2D(x, y, xs, ys)
         ymin, ymax = updateBounds(ymin, ymax, 0)
@@ -84,7 +84,13 @@ class Plot:
                 asymp.pop(0)
             if asymp[-1] == xmax and self.evaluate({ var: xmax + step }) is None:
                 asymp.pop(-1)
-        return xs, ys, asymp, float(ymin), float(ymax)
+        return {
+            "x": xs,
+            "y": ys,
+            "asymptotes": asymp,
+            "min": float(ymin),
+            "max": float(ymax)
+            }
 
     def getPlot3D(self, xmin, xmax, ymin, ymax, count):
         if self.getDimensionality() != 3:
@@ -142,4 +148,11 @@ class Plot:
             if has_succ_x: succ_x = self.evaluate({ x_var: xmax + x_step, y_var: asymp[-1][1] })
             if has_succ_y: succ_y = self.evaluate({ x_var: asymp[-1][0], y_var: ymax + y_step })
             if (has_succ_x and succ_x is None) or (has_succ_y and succ_y is None): asymp.pop(-1)
-        return xs, ys, zs, asymp, float(zmin), float(zmax)
+        return {
+            "x": xs,
+            "y": ys,
+            "z": zs,
+            "asymptotes": asymp,
+            "min": float(zmin),
+            "max": float(zmax)
+            }
