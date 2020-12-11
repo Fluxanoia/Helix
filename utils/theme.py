@@ -66,14 +66,29 @@ class Theme:
         f.patch.set_facecolor(self.getViewerFace())
     def configurePlot2D(self, a):
         a.set_facecolor(self.getViewerFace())
+
         a.spines['left'].set_color(self.getViewerSpine())
         a.spines['bottom'].set_color(self.getViewerSpine())
+        a.spines['top'].set_color('none')
+        a.spines['right'].set_color('none')
+
+        a.xaxis.set_ticks_position('bottom')
+        a.yaxis.set_ticks_position('left')
         a.xaxis.label.set_color(self.getViewerSpine())
         a.yaxis.label.set_color(self.getViewerSpine())
         a.tick_params(axis = 'x', colors = self.getViewerSpine())
         a.tick_params(axis = 'y', colors = self.getViewerSpine())
+
+        a.set_position([0, 0, 1, 1])
     def configurePlot3D(self, a):
         a.set_facecolor(self.getViewerFace())
+
+        a.xaxis.label.set_color(self.getViewerSpine())
+        a.yaxis.label.set_color(self.getViewerSpine())
+        a.zaxis.label.set_color(self.getViewerSpine())
+        a.tick_params(axis = 'x', colors = self.getViewerSpine())
+        a.tick_params(axis = 'y', colors = self.getViewerSpine())
+        a.tick_params(axis = 'z', colors = self.getViewerSpine())
 
     def getTabBody(self):
         return self.__tab_body

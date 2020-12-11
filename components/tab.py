@@ -18,12 +18,30 @@ class Tab(tk.Button):
 
     __plots = []
 
-    def __init__(self, parent, select):
+    __elev = 30
+    __azim = -60
+    __drag_pos = None
+    __drag_scale = 20
+
+    __draw = None
+
+    def __init__(self, parent, select, draw):
         super().__init__(parent,
             text = "Tab",
             command = lambda : select(self))
         Theme.getInstance().configureTabButton(self)
         FontManager.getInstance().configureText(self)
+
+        self.__draw = draw
+
+    def drag_start(self, e):
+        self.__drag_pos = (e.x, e.y)
+
+    def drag(self, e):
+        self.__azim += (self.__drag_pos[0] - e.x) / self.__drag_scale
+        self.__elev += (e.y - self.__drag_pos[1]) / self.__drag_scale
+        self.__drag_pos = (e.x, e.y)
+        self.__draw()
 
     def switch_mode(self, mode):
         self.__mode = mode
@@ -48,3 +66,9 @@ class Tab(tk.Button):
 
     def get_plots(self):
         return self.__plots
+
+    def get_elev(self):
+        return self.__elev
+
+    def get_azim(self):
+        return self.__azim

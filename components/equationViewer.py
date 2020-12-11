@@ -108,7 +108,7 @@ class EquationViewer(tk.Frame):
         FontManager.getInstance().configureText(self.__empty_message)
 
     def __addTab(self):
-        self.__tabs.append(Tab(self.__tab_bar, self.__select))
+        self.__tabs.append(Tab(self.__tab_bar, self.__select, self.__redraw))
         self.__tabs[-1].pack(side = tk.LEFT, fill = tk.Y)
 
     def __select(self, t):
@@ -120,7 +120,6 @@ class EquationViewer(tk.Frame):
 
     def __draw(self):
         mode = self.__selected_tab.get_mode()
-        print(mode)
 
         if mode == TabMode.NONE and not self.__widget == self.__mode_selector:
             if self.__widget is not None: self.__widget.pack_forget()
@@ -139,24 +138,48 @@ class EquationViewer(tk.Frame):
 
             self.__plot = HelixPlot()
 
-            if mode == TabMode.TWO_D:
-                self.__plot.plot(*self.__selected_tab.get_plots())
-            elif mode == TabMode.THREE_D:
-                self.__plot.plot3d(*self.__selected_tab.get_plots())
+            for p in self.__selected_tab.get_plots():
+                if mode == TabMode.TWO_D:
+                    self.__plot.plot(p)
+                elif mode == TabMode.THREE_D:
+                    self.__plot.plot3d(p)
 
             self.__plot.show()
 
             self.__figure = self.__plot.getFigure()
             Theme.getInstance().configureFigure(self.__figure)
+
             for a in self.__figure.axes:
-                Theme.getInstance().configurePlot2D(a)
+                if mode == TabMode.TWO_D:
+                    Theme.getInstance().configurePlot2D(a)
+                elif mode == TabMode.THREE_D:
+                    Theme.getInstance().configurePlot3D(a)
+                    a.view_init(self.__selected_tab.get_elev(),
+                        self.__selected_tab.get_azim())
 
             self.__canvas = HelixCanvas(self.__figure, master = self.__frame)
             self.__canvas.mpl_connect('button_press_event',
                 lambda e : self.__canvas.get_tk_widget().focus_set())
 
+            if mode == TabMode.THREE_D:
+                self.__canvas.get_tk_widget().bind("<ButtonPress-1>",
+                    self.__selected_tab.drag_start)
+                self.__canvas.get_tk_widget().bind("<B1-Motion>",
+                    self.__selected_tab.drag)
+
             self.__widget = self.__canvas.get_tk_widget()
             self.__widget.pack(fill = tk.BOTH, expand = True)
+            return
+
+    def __redraw(self):
+        mode = self.__selected_tab.get_mode()
+
+        if mode == TabMode.TWO_D or mode == TabMode.THREE_D:
+            if mode == TabMode.THREE_D:
+                for a in self.__figure.axes:
+                    a.view_init(self.__selected_tab.get_elev(),
+                        self.__selected_tab.get_azim())
+            self.__canvas.draw()
             return
 
     def plot(self, plots):
