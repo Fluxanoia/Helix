@@ -5,12 +5,10 @@ from utils.images import ImageManager
 from utils.parsing import Parsed
 from utils.delay import DelayTracker
 
-from components.plot import Plot
-
 class Equation(tk.Frame):
 
     # Callback
-    __add_func = None
+    __update_fun = None
     __remove_func = None
 
     # Main Widgets
@@ -38,12 +36,11 @@ class Equation(tk.Frame):
 
     # Parsing
     __parsed = None
-    __plot = None
 
-    def __init__(self, parent, add_func, remove_func):
+    def __init__(self, parent, update_fun, remove_func):
         super().__init__(parent, bg = parent["bg"], height = 110)
 
-        self.__add_func = add_func
+        self.__update_fun = update_fun
         self.__remove_func = remove_func
 
         self.__entry_var = tk.StringVar()
@@ -111,23 +108,8 @@ class Equation(tk.Frame):
         DelayTracker.getInstance().removeDelay(self, self.__debounce_id)
         self.__debounce_id = None
 
-        self.__plot = None
         self.__parsed = Parsed(self.getText())
-        blocks = self.__parsed.getBlocks()
-        if self.__parsed.hasError():
-            self.label(self.__parsed.getError())
-        elif len(blocks) == 0:
-            self.label("")
-        elif len(blocks) == 1:
-            free_vars = len(self.__parsed.getVariables())
-            if free_vars == 0:
-                self.label(self.__parsed.getValue())
-            else:
-                self.__plot = Plot(blocks[0], list(self.__parsed.getVariables()))
-                self.label(str(self.__parsed.getVariables()))
-                self.__add_func()
-        elif len(blocks) == 2:
-            self.label("...")
+        self.label(":)")
 
     def __remove(self):
         self.pack_forget()
@@ -139,5 +121,5 @@ class Equation(tk.Frame):
     def getText(self):
         return self.__entry.get()
 
-    def getPlot(self):
-        return self.__plot
+    def getParsed(self):
+        return self.__parsed

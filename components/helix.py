@@ -41,6 +41,7 @@ class Helix:
         self.__constructWindow()
         self.__constructMenu()
         self.__constructPanels()
+        self.__root.lift()
 
     def __constructWindow(self):
         self.__root.title("Helix Graphing Tool")

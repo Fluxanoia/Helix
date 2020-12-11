@@ -8,7 +8,9 @@ class Theme:
     __editor_button_active = '#808080'
     __editor_button_text   = '#FFFFFF'
 
-    __viewer_body       = '#202020'
+    __viewer_body        = '#202020'
+    __viewer_button_body = '#606060'
+    __viewer_text        = '#FFFFFF'
 
     __viewer_face_color  = '#202020'
     __viewer_spine_color = '#FFFFFF'
@@ -18,9 +20,6 @@ class Theme:
     __tab_button_body        = '#707070'
     __tab_button_body_active = '#808080'
     __tab_button_text        = '#FFFFFF'
-
-    __tab_mode_selector_button_body = '#606060'
-    __tab_mode_selector_text        = '#FFFFFF'
 
     __variable_selector_body     = '#606060'
     __variable_selector_text     = '#FFFFFF'
@@ -45,9 +44,19 @@ class Theme:
 
     def getViewerBody(self):
         return self.__viewer_body
+    def getViewerButtonBody(self):
+        return self.__viewer_button_body
+    def getViewerText(self):
+        return self.__viewer_text
     def configureViewer(self, w):
         w.configure(bg = self.getViewerBody())
         self.removeBorder(w)
+    def configureViewerButton(self, w):
+        w.configure(bg = self.getViewerButtonBody(),
+            foreground = self.getViewerText())
+    def configureViewerText(self, w):
+        w.configure(bg = self.getViewerBody(),
+            foreground = self.getViewerText())
 
     def getViewerFace(self):
         return self.__viewer_face_color
@@ -57,12 +66,12 @@ class Theme:
         f.patch.set_facecolor(self.getViewerFace())
     def configurePlot2D(self, a):
         a.set_facecolor(self.getViewerFace())
-        for s in a.spines:
-            a.spines[s].set_color(self.getViewerSpine())
+        a.spines['left'].set_color(self.getViewerSpine())
+        a.spines['bottom'].set_color(self.getViewerSpine())
         a.xaxis.label.set_color(self.getViewerSpine())
         a.yaxis.label.set_color(self.getViewerSpine())
-        a.tick_params(axis='x', colors = self.getViewerSpine())
-        a.tick_params(axis='y', colors = self.getViewerSpine())
+        a.tick_params(axis = 'x', colors = self.getViewerSpine())
+        a.tick_params(axis = 'y', colors = self.getViewerSpine())
     def configurePlot3D(self, a):
         a.set_facecolor(self.getViewerFace())
 
@@ -82,20 +91,6 @@ class Theme:
         w.configure(bg = self.getTabButtonBody(),
             activebackground = self.getTabButtonBodyActive(),
             foreground = self.getTabButtonText())
-
-    def getTabModeSelectorButtonBody(self):
-        return self.__tab_mode_selector_button_body
-    def getTabModeSelectorText(self):
-        return self.__tab_mode_selector_text
-    def configureTabModeSelector(self, w):
-        w.configure(bg = self.getViewerBody())
-        self.removeBorder(w)
-    def configureTabModeSelectorLabel(self, w):
-        w.configure(bg = self.getViewerBody(),
-            foreground = self.getTabButtonText())
-    def configureTabModeSelectorButton(self, w):
-        w.configure(bg = self.getTabModeSelectorButtonBody(),
-            foreground = self.getTabModeSelectorText())
 
     def getVariableSelectorBody(self):
         return self.__variable_selector_body

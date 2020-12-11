@@ -56,6 +56,5 @@ class EquationEditor(ScrollableFrame):
         plots = []
         for e in self.__entries:
             plot = e.getPlot()
-            if plot is not None:
-                plots.append(plot)
+            if plot is not None: plots.append(plot)
         self.__plotter(plots)

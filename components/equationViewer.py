@@ -5,11 +5,14 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.axes3d import Axes, Axes3D
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+from sympy.plotting.plot import Plot, plot, plot3d, unset_show
+import sympy as sy
+
 from utils.theme import Theme
 from utils.images import ImageManager
 from utils.fonts import FontManager
 
-from components.tab import Tab
+from components.tab import Tab, TabMode
 
 mpl.use('tkAgg')
 
@@ -18,17 +21,19 @@ class EquationViewer(tk.Frame):
     __bar_height = 0.05
     __width = None
 
+    __plot = None
     __figure = None
-    __axes2d = None
-    __axes3d = None
+
+    __frame = None
     __widget = None
+    __canvas = None
+    __mode_selector = None
+    __empty_message = None
 
     __tab_bar = None
     __tabs = []
     __selected_tab = None
     __tab_add_button = None
-
-    __canvas = None
 
     def __init__(self, parent, width):
         super().__init__(parent)
@@ -36,18 +41,24 @@ class EquationViewer(tk.Frame):
 
         self.__width = width
 
-        self.__figure = plt.figure(0, clear = True)
-        self.__axes2d = Axes(self.__figure, (0.1, 0.1, 0.8, 0.8), label = "Viewer2D")
-        self.__axes3d = Axes3D(self.__figure, (0.1, 0.1, 0.8, 0.8), label = "Viewer3D")
-        Theme.getInstance().configureFigure(self.__figure)
-        Theme.getInstance().configurePlot2D(self.__axes2d)
-        Theme.getInstance().configurePlot3D(self.__axes3d)
+        self.__frame = tk.Frame(parent)
+        Theme.getInstance().configureViewer(self.__frame)
+        self.__frame.place(relx = self.__width,
+            rely = self.__bar_height,
+            relwidth = 1 - self.__width,
+            relheight = 1 - self.__bar_height)
 
-        self.__canvas = FigureCanvasTkAgg(self.__figure, master = self)
-        self.__canvas.mpl_connect('button_press_event', self.__focus)
-        self.__canvas.draw()
-        self.__canvas.get_tk_widget().pack(side = tk.BOTTOM, fill = tk.BOTH, expand = True)
+        self.__constructTabBar()
+        self.__constructModeSelector()
+        self.__constructEmptyMessage()
 
+        self.place(relx = width,
+            relwidth = 1 - width,
+            relheight = 1)
+
+        self.__draw()
+
+    def __constructTabBar(self):
         self.__tab_bar = tk.Frame(self)
         Theme.getInstance().configureTabBar(self.__tab_bar)
         self.__tab_bar.place(relwidth = 1 - self.__bar_height,
@@ -66,40 +77,88 @@ class EquationViewer(tk.Frame):
         self.__addTab()
         self.__select(self.__tabs[0])
 
-        # self.__canvas.mpl_connect("key_press_event", self.__rotateAxis)
+    def __constructModeSelector(self):
+        self.__mode_selector = tk.Frame(self.__frame)
+        Theme.getInstance().configureViewer(self.__mode_selector)
 
-        self.place(relx = width,
-            relwidth = 1 - width,
-            relheight = 1)
+        sub_frame = tk.Frame(self.__mode_selector, width = 240)
+        Theme.getInstance().configureViewer(sub_frame)
+        button_2d = tk.Button(sub_frame, text = "2D",
+            command = lambda : self.__selected_tab.switch_mode(TabMode.TWO_D))
+        button_3d = tk.Button(sub_frame, text = "3D",
+            command = lambda : self.__selected_tab.switch_mode(TabMode.THREE_D))
+        Theme.getInstance().configureViewerButton(button_2d)
+        Theme.getInstance().configureViewerButton(button_3d)
+        FontManager.getInstance().configureText(button_2d)
+        FontManager.getInstance().configureText(button_3d)
+        button_2d.pack(side = tk.LEFT)
+        button_3d.pack(side = tk.RIGHT)
 
-    def __focus(self, _event):
-        self.__canvas.get_tk_widget().focus_set()
+        label_top = tk.Label(self.__mode_selector,
+            text = "Pick a plotting mode for this tab:")
+        label_bottom = tk.Label(self.__mode_selector,
+            text = "You can't change it once you pick (yet)!")
+        Theme.getInstance().configureViewerText(label_top)
+        Theme.getInstance().configureViewerText(label_bottom)
+        FontManager.getInstance().configureText(label_top)
+        FontManager.getInstance().configureText(label_bottom)
+        label_top.pack()
+        sub_frame.pack(ipadx = 20, ipady = 20)
+        label_bottom.pack()
 
-    def __update(self):
-        plt.draw()
+    def __constructEmptyMessage(self):
+        self.__empty_message = tk.Label(self.__frame,
+            text = "Create an entry on the left to plot something!")
+        Theme.getInstance().configureViewerText(self.__empty_message)
+        FontManager.getInstance().configureText(self.__empty_message)
 
     def __addTab(self):
         self.__tabs.append(Tab(self.__tab_bar, self.__select, self.__draw))
         self.__tabs[-1].pack(side = tk.LEFT, fill = tk.Y)
 
     def __draw(self):
-        self.__axes2d.clear()
-        self.__axes3d.clear()
-        self.__figure.clf()
+        mode = self.__selected_tab.get_mode()
 
-        element = self.__selected_tab.draw(self.__axes2d, self.__axes3d)
-        if ("axes" in element) and (not element["axes"] in self.__figure.get_axes()):
-            if not self.__widget is None: self.__widget.place_forget()
-            self.__figure.clf()
-            self.__figure.add_axes(element["axes"])
-        if ("widget" in element) and (not self.__widget == element["widget"]):
-            if not self.__widget is None: self.__widget.place_forget()
-            self.__widget = element["widget"]
-            self.__widget.place(anchor = tk.CENTER,
-                relx = self.__width + (1 - self.__width) / 2,
-                rely = 0.5)
+        if mode == TabMode.NONE and not self.__widget == self.__mode_selector:
+            if self.__widget is not None: self.__widget.pack_forget()
+            self.__mode_selector.pack(fill = tk.BOTH, expand = True)
+            self.__widget = self.__mode_selector
+            return
 
-        if not self.__canvas is None: self.__canvas.draw()
+        if mode == TabMode.EMPTY and not self.__widget == self.__empty_message:
+            if self.__widget is not None: self.__widget.pack_forget()
+            self.__empty_message.pack(fill = tk.BOTH, expand = True)
+            self.__widget = self.__empty_message
+            return
+
+        if mode == TabMode.TWO_D or mode == TabMode.THREE_D:
+            if self.__widget is not None: self.__widget.pack_forget()
+
+            self.__plot = Plot(backend = 'matplotlib')
+
+            if mode == TabMode.TWO_D:
+                x = sy.symbols('x')
+                self.__plot.extend(plot(x**2, show = False))
+            elif mode == TabMode.THREE_D:
+                x, y = sy.symbols('x y')
+                self.__plot.extend(plot3d(x*y, (x, -5, 5), (y, -5, 5), show = False))
+
+            self.__plot._backend = self.__plot.backend(self.__plot)
+            self.__plot._backend.process_series()
+
+            self.__figure = self.__plot._backend.fig
+            Theme.getInstance().configureFigure(self.__figure)
+            for a in self.__figure.axes:
+                Theme.getInstance().configurePlot2D(a)
+
+            self.__canvas = FigureCanvasTkAgg(self.__figure, master = self.__frame)
+            self.__canvas.mpl_connect('button_press_event',
+                lambda e : self.__canvas.get_tk_widget().focus_set())
+            self.__canvas.draw()
+
+            self.__widget = self.__canvas.get_tk_widget()
+            self.__widget.pack(fill = tk.BOTH, expand = True)
+            return
 
     def __select(self, t):
         if self.__selected_tab is not None:
