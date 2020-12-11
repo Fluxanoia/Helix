@@ -137,13 +137,10 @@ class EquationViewer(tk.Frame):
             if self.__widget is not None: self.__widget.pack_forget()
 
             self.__plot = HelixPlot()
-
-            for p in self.__selected_tab.get_plots():
-                if mode == TabMode.TWO_D:
-                    self.__plot.plot(p)
-                elif mode == TabMode.THREE_D:
-                    self.__plot.plot3d(p)
-
+            if mode == TabMode.TWO_D:
+                self.__plot.plot(*self.__selected_tab.get_plots())
+            elif mode == TabMode.THREE_D:
+                self.__plot.plot3d(*self.__selected_tab.get_plots())
             self.__plot.show()
 
             self.__figure = self.__plot.getFigure()
@@ -154,18 +151,17 @@ class EquationViewer(tk.Frame):
                     Theme.getInstance().configurePlot2D(a)
                 elif mode == TabMode.THREE_D:
                     Theme.getInstance().configurePlot3D(a)
-                    a.view_init(self.__selected_tab.get_elev(),
-                        self.__selected_tab.get_azim())
 
             self.__canvas = HelixCanvas(self.__figure, master = self.__frame)
-            self.__canvas.mpl_connect('button_press_event',
-                lambda e : self.__canvas.get_tk_widget().focus_set())
+            self.__redraw()
+            
+            #self.__canvas.mpl_connect('button_press_event',
+            #    lambda e : self.__canvas.get_tk_widget().focus_set())
 
-            if mode == TabMode.THREE_D:
-                self.__canvas.get_tk_widget().bind("<ButtonPress-1>",
-                    self.__selected_tab.drag_start)
-                self.__canvas.get_tk_widget().bind("<B1-Motion>",
-                    self.__selected_tab.drag)
+            self.__canvas.get_tk_widget().bind("<ButtonPress-1>",
+                self.__selected_tab.drag_start)
+            self.__canvas.get_tk_widget().bind("<B1-Motion>",
+                self.__selected_tab.drag)
 
             self.__widget = self.__canvas.get_tk_widget()
             self.__widget.pack(fill = tk.BOTH, expand = True)
@@ -175,12 +171,16 @@ class EquationViewer(tk.Frame):
         mode = self.__selected_tab.get_mode()
 
         if mode == TabMode.TWO_D or mode == TabMode.THREE_D:
-            if mode == TabMode.THREE_D:
-                for a in self.__figure.axes:
+            for a in self.__figure.axes:
+                if mode == TabMode.TWO_D:
+                    a.set_xlim(xmin = self.__selected_tab.get_xmin(),
+                        xmax = self.__selected_tab.get_xmax())
+                    a.set_ylim(ymin = self.__selected_tab.get_ymin(),
+                        ymax = self.__selected_tab.get_ymax())
+                elif mode == TabMode.THREE_D:
                     a.view_init(self.__selected_tab.get_elev(),
                         self.__selected_tab.get_azim())
             self.__canvas.draw()
-            return
 
     def plot(self, plots):
         for tab in self.__tabs: tab.set_plots(plots)

@@ -20,8 +20,11 @@ class Tab(tk.Button):
 
     __elev = 30
     __azim = -60
+    __view_rect = [-10, -10, 20, 20]
+
     __drag_pos = None
-    __drag_scale = 20
+    __drag_scale_2d = 3
+    __drag_scale_3d = 20
 
     __draw = None
 
@@ -38,8 +41,15 @@ class Tab(tk.Button):
         self.__drag_pos = (e.x, e.y)
 
     def drag(self, e):
-        self.__azim += (self.__drag_pos[0] - e.x) / self.__drag_scale
-        self.__elev += (e.y - self.__drag_pos[1]) / self.__drag_scale
+        if not self.__mode in [TabMode.TWO_D, TabMode.THREE_D]: return
+        if self.__mode == TabMode.TWO_D:
+            self.__view_rect[0] += (self.__drag_pos[0] - e.x) \
+                / (self.__view_rect[2] * self.__drag_scale_2d)
+            self.__view_rect[1] += (e.y - self.__drag_pos[1]) \
+                / (self.__view_rect[3] * self.__drag_scale_2d)
+        if self.__mode == TabMode.THREE_D:
+            self.__azim += (self.__drag_pos[0] - e.x) / self.__drag_scale_3d
+            self.__elev += (e.y - self.__drag_pos[1]) / self.__drag_scale_3d
         self.__drag_pos = (e.x, e.y)
         self.__draw()
 
@@ -57,12 +67,9 @@ class Tab(tk.Button):
             self.__plots = []
             return
 
-        valid_plots = []
-        for p in plots:
-            if len(p.get_blocks()) == 1 and \
-                len(p.get_variables()) + 1 == self.__mode.value:
-                valid_plots.append(p.get_blocks()[0])
-        self.__plots = valid_plots
+        self.__plots = list(map(lambda p : p.get_blocks()[0],
+            filter(lambda p : p.has_dim() and p.get_dim() == self.__mode.value,
+            plots)))
 
     def get_plots(self):
         return self.__plots
@@ -72,3 +79,8 @@ class Tab(tk.Button):
 
     def get_azim(self):
         return self.__azim
+
+    def get_xmin(self): return self.__view_rect[0]
+    def get_xmax(self): return self.__view_rect[0] + self.__view_rect[2]
+    def get_ymin(self): return self.__view_rect[1]
+    def get_ymax(self): return self.__view_rect[1] + self.__view_rect[3]

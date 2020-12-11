@@ -1,6 +1,6 @@
 import enum
 
-import sympy
+import sympy as sy
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.parsing.sympy_parser import standard_transformations, \
     implicit_multiplication, \
@@ -28,7 +28,7 @@ class Parser:
         Parser.__instance = self
 
     def parse(self, expr):
-        return sympy.sympify(parse_expr(expr,
+        return sy.sympify(parse_expr(expr,
             transformations = self.__transformations))
 
 class ParseMode(enum.Enum):
@@ -42,7 +42,8 @@ class Parsed:
     __comparative = None
     __blocks = []
 
-    __symbols = []
+    __dim = None
+
     __binds = None
 
     __value = None
@@ -50,6 +51,8 @@ class Parsed:
 
     def __init__(self, expr):
         mode = ParseMode.NORMAL
+
+        x, y = sy.symbols('x y')
 
         comp = None
         blocks = []
@@ -95,19 +98,23 @@ class Parsed:
                 self.__error = "Error."
                 return
 
+        self.__blocks = blocks
+
         if len(blocks) == 0:
             return None
         elif len(blocks) == 1:
-            self.__comparative = None
-            self.__blocks = blocks
-            self.__symbols = blocks[0].atoms(sympy.Symbol)
-            self.__binds = None
-            if len(self.__symbols) == 0:
+            symbols = list(filter(lambda s : s in [x, y], 
+                blocks[0].atoms(sy.Symbol)))
+            if len(symbols) == 0:
                 try:
                     self.__value = blocks[0].evalf()
                 except TypeError:
                     self.__value = None
                     self.__error = "Evaluation error."
+            elif len(symbols) == 1:
+                if symbols[0] == x: self.__dim = 2
+            elif len(symbols) == 2:
+                self.__dim = 3
         elif len(blocks) == 2:
             return None
         else:
@@ -120,11 +127,13 @@ class Parsed:
     def get_blocks(self):
         return self.__blocks
 
-    def get_variables(self):
-        return list(self.__symbols)
-
     def get_binding(self):
         return self.__binds
+
+    def has_dim(self):
+        return self.__dim is not None
+    def get_dim(self):
+        return self.__dim
 
     def has_value(self):
         return self.__value is not None
