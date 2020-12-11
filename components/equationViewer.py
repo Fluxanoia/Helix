@@ -143,7 +143,7 @@ class EquationViewer(tk.Frame):
                 self.__plot.plot3d(*self.__selected_tab.get_plots())
             self.__plot.show()
 
-            self.__figure = self.__plot.getFigure()
+            self.__figure = self.__plot.get_figure()
             Theme.getInstance().configureFigure(self.__figure)
 
             for a in self.__figure.axes:
@@ -154,10 +154,9 @@ class EquationViewer(tk.Frame):
 
             self.__canvas = HelixCanvas(self.__figure, master = self.__frame)
             self.__redraw()
-            
-            #self.__canvas.mpl_connect('button_press_event',
-            #    lambda e : self.__canvas.get_tk_widget().focus_set())
 
+            self.__canvas.get_tk_widget().bind("<ButtonPress-1>",
+                lambda e : self.__canvas.get_tk_widget().focus_set())
             self.__canvas.get_tk_widget().bind("<ButtonPress-1>",
                 self.__selected_tab.drag_start)
             self.__canvas.get_tk_widget().bind("<B1-Motion>",
@@ -168,18 +167,10 @@ class EquationViewer(tk.Frame):
             return
 
     def __redraw(self):
-        mode = self.__selected_tab.get_mode()
-
-        if mode == TabMode.TWO_D or mode == TabMode.THREE_D:
+        if self.__selected_tab.get_mode() == TabMode.THREE_D:
             for a in self.__figure.axes:
-                if mode == TabMode.TWO_D:
-                    a.set_xlim(xmin = self.__selected_tab.get_xmin(),
-                        xmax = self.__selected_tab.get_xmax())
-                    a.set_ylim(ymin = self.__selected_tab.get_ymin(),
-                        ymax = self.__selected_tab.get_ymax())
-                elif mode == TabMode.THREE_D:
-                    a.view_init(self.__selected_tab.get_elev(),
-                        self.__selected_tab.get_azim())
+                a.view_init(self.__selected_tab.get_elev(),
+                    self.__selected_tab.get_azim())
             self.__canvas.draw()
 
     def plot(self, plots):

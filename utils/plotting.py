@@ -22,12 +22,16 @@ class HelixPlot(Plot):
     def plot3d_parametric_surface(self, *args, **kwargs):
         self.extend(plot3d_parametric_surface(*args, show = False, **kwargs))
 
-    def getFigure(self):
+    def replot(self):
+        self._backend.process_series()
+
+    def get_figure(self):
         return self._backend.fig
 
 class HelixBackend(MatplotlibBackend):
 
-    def show(self): self.process_series()
+    def show(self):
+        self.process_series()
 
     def save(self, path):
         self.process_series()
@@ -38,7 +42,7 @@ class HelixBackend(MatplotlibBackend):
 
 class HelixCanvasBase(FigureCanvasTk):
 
-    def __init__(self, figure, master=None, resize_callback=None):
+    def __init__(self, figure, master = None, resize_callback = None):
         super(FigureCanvasTk, self).__init__(figure)
         self._idle = True
         self._idle_callback = None

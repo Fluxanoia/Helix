@@ -103,8 +103,8 @@ class Parsed:
         if len(blocks) == 0:
             return None
         elif len(blocks) == 1:
-            symbols = list(filter(lambda s : s in [x, y], 
-                blocks[0].atoms(sy.Symbol)))
+            symbols = list(filter(lambda s : s in [x, y],
+                blocks[0].free_symbols))
             if len(symbols) == 0:
                 try:
                     self.__value = blocks[0].evalf()
