@@ -11,6 +11,7 @@ import sympy as sy
 from utils.theme import Theme
 from utils.images import ImageManager
 from utils.fonts import FontManager
+from utils.plotting import HelixPlot
 
 from components.tab import Tab, TabMode
 
@@ -134,19 +135,18 @@ class EquationViewer(tk.Frame):
         if mode == TabMode.TWO_D or mode == TabMode.THREE_D:
             if self.__widget is not None: self.__widget.pack_forget()
 
-            self.__plot = Plot(backend = 'matplotlib')
+            self.__plot = HelixPlot()
 
             if mode == TabMode.TWO_D:
                 x = sy.symbols('x')
-                self.__plot.extend(plot(x**2, show = False))
+                self.__plot.plot(x**2)
             elif mode == TabMode.THREE_D:
                 x, y = sy.symbols('x y')
-                self.__plot.extend(plot3d(x*y, (x, -5, 5), (y, -5, 5), show = False))
+                self.__plot.plot3d(x*y, (x, -5, 5), (y, -5, 5))
 
-            self.__plot._backend = self.__plot.backend(self.__plot)
-            self.__plot._backend.process_series()
+            self.__plot.show()
 
-            self.__figure = self.__plot._backend.fig
+            self.__figure = self.__plot.getFigure()
             Theme.getInstance().configureFigure(self.__figure)
             for a in self.__figure.axes:
                 Theme.getInstance().configurePlot2D(a)
