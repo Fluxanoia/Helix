@@ -1,21 +1,11 @@
 import tkinter as tk
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d.axes3d import Axes, Axes3D
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
-from sympy.plotting.plot import Plot, plot, plot3d, unset_show
-import sympy as sy
-
 from utils.theme import Theme
 from utils.images import ImageManager
 from utils.fonts import FontManager
-from utils.plotting import HelixPlot
+from utils.plotting import HelixPlot, HelixCanvas
 
 from components.tab import Tab, TabMode
-
-mpl.use('tkAgg')
 
 class EquationViewer(tk.Frame):
 
@@ -78,6 +68,10 @@ class EquationViewer(tk.Frame):
         self.__addTab()
         self.__select(self.__tabs[0])
 
+    def __modeSwitcher(self, mode):
+        self.__selected_tab.switch_mode(mode)
+        self.__draw()
+
     def __constructModeSelector(self):
         self.__mode_selector = tk.Frame(self.__frame)
         Theme.getInstance().configureViewer(self.__mode_selector)
@@ -85,9 +79,9 @@ class EquationViewer(tk.Frame):
         sub_frame = tk.Frame(self.__mode_selector, width = 240)
         Theme.getInstance().configureViewer(sub_frame)
         button_2d = tk.Button(sub_frame, text = "2D",
-            command = lambda : self.__selected_tab.switch_mode(TabMode.TWO_D))
+            command = lambda : self.__modeSwitcher(TabMode.TWO_D))
         button_3d = tk.Button(sub_frame, text = "3D",
-            command = lambda : self.__selected_tab.switch_mode(TabMode.THREE_D))
+            command = lambda : self.__modeSwitcher(TabMode.THREE_D))
         Theme.getInstance().configureViewerButton(button_2d)
         Theme.getInstance().configureViewerButton(button_3d)
         FontManager.getInstance().configureText(button_2d)
@@ -114,11 +108,19 @@ class EquationViewer(tk.Frame):
         FontManager.getInstance().configureText(self.__empty_message)
 
     def __addTab(self):
-        self.__tabs.append(Tab(self.__tab_bar, self.__select, self.__draw))
+        self.__tabs.append(Tab(self.__tab_bar, self.__select))
         self.__tabs[-1].pack(side = tk.LEFT, fill = tk.Y)
+
+    def __select(self, t):
+        if self.__selected_tab is not None:
+            self.__selected_tab.configure(relief = tk.RAISED)
+        self.__selected_tab = t
+        self.__selected_tab.configure(relief = tk.SUNKEN)
+        self.__draw()
 
     def __draw(self):
         mode = self.__selected_tab.get_mode()
+        print(mode)
 
         if mode == TabMode.NONE and not self.__widget == self.__mode_selector:
             if self.__widget is not None: self.__widget.pack_forget()
@@ -138,11 +140,9 @@ class EquationViewer(tk.Frame):
             self.__plot = HelixPlot()
 
             if mode == TabMode.TWO_D:
-                x = sy.symbols('x')
-                self.__plot.plot(x**2)
+                self.__plot.plot(*self.__selected_tab.get_plots())
             elif mode == TabMode.THREE_D:
-                x, y = sy.symbols('x y')
-                self.__plot.plot3d(x*y, (x, -5, 5), (y, -5, 5))
+                self.__plot.plot3d(*self.__selected_tab.get_plots())
 
             self.__plot.show()
 
@@ -151,21 +151,13 @@ class EquationViewer(tk.Frame):
             for a in self.__figure.axes:
                 Theme.getInstance().configurePlot2D(a)
 
-            self.__canvas = FigureCanvasTkAgg(self.__figure, master = self.__frame)
+            self.__canvas = HelixCanvas(self.__figure, master = self.__frame)
             self.__canvas.mpl_connect('button_press_event',
                 lambda e : self.__canvas.get_tk_widget().focus_set())
-            self.__canvas.draw()
 
             self.__widget = self.__canvas.get_tk_widget()
             self.__widget.pack(fill = tk.BOTH, expand = True)
             return
-
-    def __select(self, t):
-        if self.__selected_tab is not None:
-            self.__selected_tab.configure(relief = tk.RAISED)
-        self.__selected_tab = t
-        self.__selected_tab.configure(relief = tk.SUNKEN)
-        self.__draw()
 
     def plot(self, plots):
         for tab in self.__tabs: tab.set_plots(plots)

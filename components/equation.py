@@ -57,18 +57,18 @@ class Equation(tk.Frame):
             rely = self.__paddingy * 2 + 0.25,
             relwidth = 1 - self.__paddingx * 2)
 
-        self.__colour_button = self.__createButton(lambda : None, "colour.png")
-        self.__lock_button = self.__createButton(lambda : None, "lock.png")
-        self.__hide_button = self.__createButton(lambda : None, "hide.png")
-        self.__remove_button = self.__createButton(self.__remove, "remove.png")
+        self.__colour_button = self.__create_button(lambda : None, "colour.png")
+        self.__lock_button = self.__create_button(lambda : None, "lock.png")
+        self.__hide_button = self.__create_button(lambda : None, "hide.png")
+        self.__remove_button = self.__create_button(self.__remove, "remove.png")
 
         self.__leftButtons = [self.__colour_button, self.__lock_button, self.__hide_button]
         self.__rightButtons = [self.__remove_button]
-        self.__placeButtons()
+        self.__place_buttons()
 
         self.pack(fill = tk.BOTH, expand = True)
 
-    def __createButton(self, command, img_path):
+    def __create_button(self, command, img_path):
         return tk.Button(self,
             command = command,
             image = ImageManager.getInstance().getImage(
@@ -76,13 +76,13 @@ class Equation(tk.Frame):
                 self.__button_size,
                 self.__button_size))
 
-    def __placeButtons(self):
+    def __place_buttons(self):
         for i in range(len(self.__leftButtons)):
-            self.__placeButtonLeft(self.__leftButtons[i], i)
+            self.__place_buttonLeft(self.__leftButtons[i], i)
         for i in range(len(self.__rightButtons)):
-            self.__placeButtonRight(self.__rightButtons[i], i)
+            self.__place_buttonRight(self.__rightButtons[i], i)
 
-    def __placeButtonLeft(self, button, count):
+    def __place_buttonLeft(self, button, count):
         button.place(anchor = tk.SW,
             x = self.__button_size * count,
             relx = self.__paddingx * (count + 1),
@@ -90,7 +90,7 @@ class Equation(tk.Frame):
             w = self.__button_size,
             h = self.__button_size)
 
-    def __placeButtonRight(self, button, count = 0):
+    def __place_buttonRight(self, button, count = 0):
         button.place(anchor = tk.SE,
             x = self.__button_size * count,
             relx = 1 - self.__paddingx * (count + 1),
@@ -108,8 +108,10 @@ class Equation(tk.Frame):
         DelayTracker.getInstance().removeDelay(self, self.__debounce_id)
         self.__debounce_id = None
 
-        self.__parsed = Parsed(self.getText())
+        self.__parsed = Parsed(self.get_text())
         self.label(":)")
+
+        self.__update_fun()
 
     def __remove(self):
         self.pack_forget()
@@ -118,8 +120,8 @@ class Equation(tk.Frame):
     def label(self, text):
         self.__label.config(text = text)
 
-    def getText(self):
+    def get_text(self):
         return self.__entry.get()
 
-    def getParsed(self):
+    def get_parsed(self):
         return self.__parsed

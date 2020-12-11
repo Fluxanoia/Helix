@@ -114,24 +114,24 @@ class Parsed:
             self.__error = "Too many chained expressions."
             return None
 
-    def getComparative(self):
+    def get_comparative(self):
         return self.__comparative
 
-    def getBlocks(self):
+    def get_blocks(self):
         return self.__blocks
 
-    def getVariables(self):
-        return self.__symbols
+    def get_variables(self):
+        return list(self.__symbols)
 
-    def getBinding(self):
+    def get_binding(self):
         return self.__binds
 
-    def hasValue(self):
+    def has_value(self):
         return self.__value is not None
-    def getValue(self):
+    def get_value(self):
         return self.__value
 
-    def hasError(self):
+    def has_error(self):
         return self.__error is not None
-    def getError(self):
+    def get_error(self):
         return self.__error

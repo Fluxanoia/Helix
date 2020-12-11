@@ -20,7 +20,7 @@ class EquationEditor(ScrollableFrame):
     __add_button_height = 0.05
 
     def __init__(self, parent, width, plotter):
-        super().__init__(parent, self.__entryConfig)
+        super().__init__(parent, self.__entry_config)
         Theme.getInstance().configureEditor(self)
         Theme.getInstance().configureEditor(self.getCanvas())
         Theme.getInstance().configureEditor(self.getInnerFrame())
@@ -32,7 +32,7 @@ class EquationEditor(ScrollableFrame):
 
         self.__entry_button = tk.Button(parent,
             text = "+",
-            command = self.__addEntry)
+            command = self.__add_entry)
         Theme.getInstance().configureEditorButton(self.__entry_button)
         FontManager.getInstance().configureText(self.__entry_button)
         self.__entry_button.place(
@@ -40,14 +40,18 @@ class EquationEditor(ScrollableFrame):
             relwidth = width,
             relheight = self.__add_button_height)
 
-    def __addEntry(self):
+    def __add_entry(self):
         self.__entries.append(Equation(
             self.getInnerFrame(),
             self.__update,
-            self.__entries.remove))
+            self.__remove_entry))
         self.__entries[-1].configure(width = self.__entry_width)
 
-    def __entryConfig(self, width):
+    def __remove_entry(self, entry):
+        self.__entries.remove(entry)
+        self.__update()
+
+    def __entry_config(self, width):
         self.__entry_width = width
         for e in self.__entries:
             e.configure(width = self.__entry_width)
@@ -55,6 +59,6 @@ class EquationEditor(ScrollableFrame):
     def __update(self):
         plots = []
         for e in self.__entries:
-            plot = e.getPlot()
+            plot = e.get_parsed()
             if plot is not None: plots.append(plot)
         self.__plotter(plots)
