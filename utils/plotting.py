@@ -1,97 +1,121 @@
-import tkinter as tk
+import matplotlib as mpl
+from mpl_toolkits.mplot3d.axes3d import Axes3D
+from mpl_toolkits.mplot3d.art3d import Line3DCollection
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from matplotlib.backends._backend_tk import FigureCanvasTk, blit
-from matplotlib.backends.backend_agg import FigureCanvasAgg
+from sympy import Expr, sympify
+from sympy.plotting.plot import _matplotlib_list, check_arguments, \
+    LineOver1DRangeSeries
 
-from sympy.plotting.plot import Plot, MatplotlibBackend, \
-    plot, plot_parametric, plot3d, plot3d_parametric_line, plot3d_parametric_surface
+from utils.theme import Theme
 
-class HelixPlot(Plot):
+class HelixPlot(FigureCanvasTkAgg):
 
-    def __init__(self):
-        super().__init__(backend = HelixBackend)
+    __figure = mpl.figure.Figure()
+    __axis = None
 
-    def plot(self, *args, **kwargs):
-        self.extend(plot(*args, show = False, **kwargs))
-    def plot_parametric(self, *args, **kwargs):
-        self.extend(plot_parametric(*args, show = False, **kwargs))
-    def plot3d(self, *args, **kwargs):
-        self.extend(plot3d(*args, show = False, **kwargs))
-    def plot3d_parametric_line(self, *args, **kwargs):
-        self.extend(plot3d_parametric_line(*args, show = False, **kwargs))
-    def plot3d_parametric_surface(self, *args, **kwargs):
-        self.extend(plot3d_parametric_surface(*args, show = False, **kwargs))
+    __data = []
 
-    def replot(self):
-        self._backend.process_series()
+    __is_lambda = lambda f : lambda *x : all(getattr(i, f, True) for i in x)
+    __is_real = __is_lambda('is_real')
+    __is_finite = __is_lambda('is_finite')
 
-    def get_figure(self):
-        return self._backend.fig
+    __xlim = (-10, 10)
+    __ylim = (-10, 10)
 
-class HelixBackend(MatplotlibBackend):
+    def __init__(self, parent, press_func, drag_func):
+        super().__init__(self.__figure, master = parent)
+        Theme.getInstance().configureFigure(self.__figure)
 
-    def show(self):
-        self.process_series()
+        def presser(e):
+            self.get_tk_widget().focus_set()
+            press_func(e)
 
-    def save(self, path):
-        self.process_series()
-        self.fig.savefig(path)
+        def dragger(e):
+            x, y = drag_func(e)
+            self.set_limits(x, y)
 
-    def close(self):
-        pass
+        self.get_tk_widget().bind("<ButtonPress-1>", presser)
+        self.get_tk_widget().bind("<B1-Motion>", dragger)
 
-class HelixCanvasBase(FigureCanvasTk):
+    def widget(self):
+        return self.get_tk_widget()
 
-    def __init__(self, figure, master = None, resize_callback = None):
-        super(FigureCanvasTk, self).__init__(figure)
-        self._idle = True
-        self._idle_callback = None
-        w, h = self.figure.bbox.size.astype(int)
-        self._tkcanvas = tk.Canvas(
-            master = master, background="white",
-            width = w, height = h, borderwidth = 0,
-            highlightthickness = 0)
-        self._tkphoto = tk.PhotoImage(
-            master = self._tkcanvas, width = w, height = h)
-        self._tkcanvas.create_image(w // 2, h // 2, image = self._tkphoto)
-        self._resize_callback = resize_callback
-        self._tkcanvas.bind("<Configure>", self.resize)
-        self._tkcanvas.bind("<Key>", self.key_press)
-        self._tkcanvas.bind("<Motion>", self.motion_notify_event)
-        self._tkcanvas.bind("<Enter>", self.enter_notify_event)
-        self._tkcanvas.bind("<Leave>", self.leave_notify_event)
-        self._tkcanvas.bind("<KeyRelease>", self.key_release)
-        for name in ["<Button-1>", "<Button-2>", "<Button-3>"]:
-            self._tkcanvas.bind(name, self.button_press_event)
-        for name in [
-                "<Double-Button-1>", "<Double-Button-2>", "<Double-Button-3>"]:
-            self._tkcanvas.bind(name, self.button_dblclick_event)
-        for name in [
-                "<ButtonRelease-1>", "<ButtonRelease-2>", "<ButtonRelease-3>"]:
-            self._tkcanvas.bind(name, self.button_release_event)
+    def set_limits(self, xlim, ylim):
+        if not (self.__is_real(xlim) and self.__is_real(ylim)):
+            raise ValueError("Non-real limits in HelixPlot.")
+        if not (self.__is_finite(xlim) and self.__is_finite(ylim)):
+            raise ValueError("Infinite limits in HelixPlot.")
+        self.__xlim = xlim
+        self.__ylim = ylim
+        self.redraw()
 
-        for name in "<Button-4>", "<Button-5>":
-            self._tkcanvas.bind(name, self.scroll_event)
+    def remove_plots(self):
+        self.__data = []
+        self.redraw()
 
-        root = self._tkcanvas.winfo_toplevel()
-        root.bind("<MouseWheel>", self.scroll_event_windows, "+")
+    def set_plots(self, exprs):
+        self.__data = []
+        self.add_plots(exprs)
 
-        def filter_destroy(event):
-            if event.widget is self._tkcanvas:
-                self._master.update_idletasks()
-                self.close_event()
-        root.bind("<Destroy>", filter_destroy, "+")
+    def add_plots(self, exprs):
+        if self.__axis is None:
+            self.__axis = mpl.axes.Axes(self.__figure, (0, 0, 1, 1))
+            Theme.getInstance().configurePlot2D(self.__axis)
+            self.__figure.add_axes(self.__axis)
+        if isinstance(self.__axis, Axes3D):
+            raise ValueError("Cannot mix 2D and 3D in HelixPlot.")
 
-        self._master = master
+        exprs = list(map(sympify, exprs))
+        free = set()
+        for a in filter(lambda a : isinstance(a, Expr), exprs):
+            free |= a.free_symbols
+            if len(free) > 1:
+                raise ValueError("Too many free variables in HelixPlot.add_plot")
+        self.__data.extend([(expr, LineOver1DRangeSeries(*expr)) \
+            for expr in check_arguments(exprs, 1, 1)])
 
-class HelixCanvas(FigureCanvasAgg, HelixCanvasBase):
+        self.redraw()
+        # create plots, add to data
+        # dimension checks, axis swaps
+        # labels and colors ?
 
-    def draw(self):
-        super().draw()
-        blit(self._tkphoto, self.renderer._renderer, (0, 1, 2, 3))
-        self._master.update_idletasks()
+    def redraw(self):
+        if self.__axis is not None: self.__axis.clear()
 
-    def blit(self, bbox = None):
-        blit(self._tkphoto, self.renderer._renderer,
-            (0, 1, 2, 3), bbox = bbox)
-        self._master.update_idletasks()
+        for (_e, s) in self.__data:
+            if s.is_2Dline:
+                s.start = self.__xlim[0]
+                s.end = self.__xlim[1]
+                collection = mpl.collections.LineCollection(s.get_segments())
+                self.__axis.add_collection(collection)
+            elif s.is_contour:
+                self.__axis.contour(*s.get_meshes())
+            elif s.is_3Dline:
+                collection = Line3DCollection(s.get_segments())
+                self.__axis.add_collection(collection)
+                x, y, z = s.get_points()
+            elif s.is_3Dsurface:
+                x, y, z = s.get_meshes()
+                collection = self.__axis.plot_surface(x, y, z,
+                    rstride = 1, cstride = 1, linewidth = 0.1)
+            elif s.is_implicit:
+                points = s.get_raster()
+                if len(points) == 2:
+                    x, y = _matplotlib_list(points[0])
+                    self.__axis.fill(x, y, facecolor = s.line_color, edgecolor = 'None')
+                else:
+                    colormap = mpl.colors.ListedColormap(["white", s.line_color])
+                    xarray, yarray, zarray, plot_type = points
+                    if plot_type == 'contour':
+                        self.__axis.contour(xarray, yarray, zarray, cmap = colormap)
+                    else:
+                        self.__axis.contourf(xarray, yarray, zarray, cmap = colormap)
+            else: raise NotImplementedError("Unimplemented plot type in HelixPlot")
+
+        if self.__axis is not None:
+            self.__axis.spines['left'].set_position('center')
+            self.__axis.spines['bottom'].set_position('center')
+            self.__axis.set_xlim(self.__xlim)
+            self.__axis.set_ylim(self.__ylim)
+        self.draw()

@@ -28,14 +28,12 @@ class Tab(tk.Button):
 
     __draw = None
 
-    def __init__(self, parent, select, draw):
+    def __init__(self, parent, select):
         super().__init__(parent,
             text = "Tab",
             command = lambda : select(self))
         Theme.getInstance().configureTabButton(self)
         FontManager.getInstance().configureText(self)
-
-        self.__draw = draw
 
     def drag_start(self, e):
         self.__drag_pos = (e.x, e.y)
@@ -51,7 +49,7 @@ class Tab(tk.Button):
             self.__azim += (self.__drag_pos[0] - e.x) / self.__drag_scale_3d
             self.__elev += (e.y - self.__drag_pos[1]) / self.__drag_scale_3d
         self.__drag_pos = (e.x, e.y)
-        self.__draw()
+        return self.get_lims()
 
     def switch_mode(self, mode):
         self.__mode = mode
@@ -84,3 +82,5 @@ class Tab(tk.Button):
     def get_xmax(self): return self.__view_rect[0] + self.__view_rect[2]
     def get_ymin(self): return self.__view_rect[1]
     def get_ymax(self): return self.__view_rect[1] + self.__view_rect[3]
+    def get_lims(self):
+        return ((self.get_xmin(), self.get_xmax()), (self.get_ymin(), self.get_ymax()))

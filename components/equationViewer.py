@@ -3,7 +3,7 @@ import tkinter as tk
 from utils.theme import Theme
 from utils.images import ImageManager
 from utils.fonts import FontManager
-from utils.plotting import HelixPlot, HelixCanvas
+from utils.plotting import HelixPlot
 
 from components.tab import Tab, TabMode
 
@@ -12,14 +12,11 @@ class EquationViewer(tk.Frame):
     __bar_height = 0.05
     __width = None
 
-    __plot = None
-    __figure = None
-
     __frame = None
     __widget = None
-    __canvas = None
     __mode_selector = None
     __empty_message = None
+    __plot = None
 
     __tab_bar = None
     __tabs = []
@@ -32,22 +29,25 @@ class EquationViewer(tk.Frame):
 
         self.__width = width
 
+        self.__constructViewFrame(parent)
+        self.__constructTabBar()
+        self.__constructModeSelector()
+        self.__constructEmptyMessage()
+
+        self.place(relx = width, relwidth = 1 - width, relheight = 1)
+
+        self.__draw()
+
+    def __constructViewFrame(self, parent):
         self.__frame = tk.Frame(parent)
         Theme.getInstance().configureViewer(self.__frame)
         self.__frame.place(relx = self.__width,
             rely = self.__bar_height,
             relwidth = 1 - self.__width,
             relheight = 1 - self.__bar_height)
-
-        self.__constructTabBar()
-        self.__constructModeSelector()
-        self.__constructEmptyMessage()
-
-        self.place(relx = width,
-            relwidth = 1 - width,
-            relheight = 1)
-
-        self.__draw()
+        self.__plot = HelixPlot(self.__frame,
+            lambda e : self.__selected_tab.drag_start(e),
+            lambda e : self.__selected_tab.drag(e))
 
     def __constructTabBar(self):
         self.__tab_bar = tk.Frame(self)
@@ -108,7 +108,7 @@ class EquationViewer(tk.Frame):
         FontManager.getInstance().configureText(self.__empty_message)
 
     def __addTab(self):
-        self.__tabs.append(Tab(self.__tab_bar, self.__select, self.__redraw))
+        self.__tabs.append(Tab(self.__tab_bar, self.__select))
         self.__tabs[-1].pack(side = tk.LEFT, fill = tk.Y)
 
     def __select(self, t):
@@ -121,57 +121,22 @@ class EquationViewer(tk.Frame):
     def __draw(self):
         mode = self.__selected_tab.get_mode()
 
-        if mode == TabMode.NONE and not self.__widget == self.__mode_selector:
-            if self.__widget is not None: self.__widget.pack_forget()
-            self.__mode_selector.pack(fill = tk.BOTH, expand = True)
-            self.__widget = self.__mode_selector
-            return
+        none = mode == TabMode.NONE and not self.__widget == self.__mode_selector
+        empty = mode == TabMode.EMPTY and not self.__widget == self.__empty_message
+        plot2d = mode == TabMode.TWO_D
+        plot3d = mode == TabMode.THREE_D
 
-        if mode == TabMode.EMPTY and not self.__widget == self.__empty_message:
-            if self.__widget is not None: self.__widget.pack_forget()
-            self.__empty_message.pack(fill = tk.BOTH, expand = True)
-            self.__widget = self.__empty_message
-            return
+        if any([none, empty, plot2d, plot3d]) and self.__widget is not None:
+            self.__widget.pack_forget()
 
-        if mode == TabMode.TWO_D or mode == TabMode.THREE_D:
-            if self.__widget is not None: self.__widget.pack_forget()
+        if none: self.__widget = self.__mode_selector
+        if empty: self.__widget = self.__empty_message
+        if plot2d: self.__plot.set_plots(self.__selected_tab.get_plots())
+        if plot3d: raise NotImplementedError("3d not ready")
+        if plot2d or plot3d: self.__widget = self.__plot.widget()
 
-            self.__plot = HelixPlot()
-            if mode == TabMode.TWO_D:
-                self.__plot.plot(*self.__selected_tab.get_plots())
-            elif mode == TabMode.THREE_D:
-                self.__plot.plot3d(*self.__selected_tab.get_plots())
-            self.__plot.show()
-
-            self.__figure = self.__plot.get_figure()
-            Theme.getInstance().configureFigure(self.__figure)
-
-            for a in self.__figure.axes:
-                if mode == TabMode.TWO_D:
-                    Theme.getInstance().configurePlot2D(a)
-                elif mode == TabMode.THREE_D:
-                    Theme.getInstance().configurePlot3D(a)
-
-            self.__canvas = HelixCanvas(self.__figure, master = self.__frame)
-            self.__redraw()
-
-            self.__canvas.get_tk_widget().bind("<ButtonPress-1>",
-                lambda e : self.__canvas.get_tk_widget().focus_set())
-            self.__canvas.get_tk_widget().bind("<ButtonPress-1>",
-                self.__selected_tab.drag_start)
-            self.__canvas.get_tk_widget().bind("<B1-Motion>",
-                self.__selected_tab.drag)
-
-            self.__widget = self.__canvas.get_tk_widget()
+        if any([none, empty, plot2d, plot3d]):
             self.__widget.pack(fill = tk.BOTH, expand = True)
-            return
-
-    def __redraw(self):
-        if self.__selected_tab.get_mode() == TabMode.THREE_D:
-            for a in self.__figure.axes:
-                a.view_init(self.__selected_tab.get_elev(),
-                    self.__selected_tab.get_azim())
-            self.__canvas.draw()
 
     def plot(self, plots):
         for tab in self.__tabs: tab.set_plots(plots)
