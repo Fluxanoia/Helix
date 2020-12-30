@@ -35,6 +35,10 @@ class ParseMode(enum.Enum):
     NORMAL      = 0
     COMPARATIVE = 1
 
+class Dimension(enum.Enum):
+    TWO_D   = 2
+    THREE_D = 3
+
 class Parsed:
 
     __comparatives = ['<', '>', '=']

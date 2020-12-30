@@ -18,15 +18,16 @@ class Tab(tk.Button):
 
     __plots = []
 
-    __elev = 30
-    __azim = -60
     __view_rect = [-10, -10, 20, 20]
 
+    __elev = 30
+    __azim = -60
+    __view_cuboid = [-10, -10, -10, 20, 20, 20]
+
     __drag_pos = None
-    __drag_scale_2d = 3
+    __drag_scale_2d = 800
     __drag_scale_3d = 20
 
-    __draw = None
 
     def __init__(self, parent, select):
         super().__init__(parent,
@@ -42,13 +43,35 @@ class Tab(tk.Button):
         if not self.__mode in [TabMode.TWO_D, TabMode.THREE_D]: return
         if self.__mode == TabMode.TWO_D:
             self.__view_rect[0] += (self.__drag_pos[0] - e.x) \
-                / (self.__view_rect[2] * self.__drag_scale_2d)
+                * (self.__view_rect[2] / self.__drag_scale_2d)
             self.__view_rect[1] += (e.y - self.__drag_pos[1]) \
-                / (self.__view_rect[3] * self.__drag_scale_2d)
+                * (self.__view_rect[3] / self.__drag_scale_2d)
+            self.__drag_pos = (e.x, e.y)
+            return self.get_lims()
         if self.__mode == TabMode.THREE_D:
             self.__azim += (self.__drag_pos[0] - e.x) / self.__drag_scale_3d
             self.__elev += (e.y - self.__drag_pos[1]) / self.__drag_scale_3d
-        self.__drag_pos = (e.x, e.y)
+            self.__drag_pos = (e.x, e.y)
+            return (self.get_elev(), self.get_azim())
+
+    def zoom(self, e):
+        if not self.__mode in [TabMode.TWO_D, TabMode.THREE_D]: return
+        if self.__mode == TabMode.TWO_D:
+            lw = max(self.__view_rect[2:4])
+            sd = (0.05 * lw) * (1 if e.num == 5 or e.delta < 0 else -1)
+            self.__view_rect[0] -= sd
+            self.__view_rect[1] -= sd
+            self.__view_rect[2] += 2 * sd
+            self.__view_rect[3] += 2 * sd
+        if self.__mode == TabMode.THREE_D:
+            lw = max(self.__view_cuboid[3:6])
+            sd = (0.05 * lw) * (1 if e.num == 5 or e.delta < 0 else -1)
+            self.__view_cuboid[0] -= sd
+            self.__view_cuboid[1] -= sd
+            self.__view_cuboid[2] -= sd
+            self.__view_cuboid[3] += 2 * sd
+            self.__view_cuboid[4] += 2 * sd
+            self.__view_cuboid[5] += 2 * sd
         return self.get_lims()
 
     def switch_mode(self, mode):
@@ -78,9 +101,24 @@ class Tab(tk.Button):
     def get_azim(self):
         return self.__azim
 
-    def get_xmin(self): return self.__view_rect[0]
-    def get_xmax(self): return self.__view_rect[0] + self.__view_rect[2]
-    def get_ymin(self): return self.__view_rect[1]
-    def get_ymax(self): return self.__view_rect[1] + self.__view_rect[3]
+    def get_xmin_2d(self): return self.__view_rect[0]
+    def get_xmax_2d(self): return self.__view_rect[0] + self.__view_rect[2]
+    def get_ymin_2d(self): return self.__view_rect[1]
+    def get_ymax_2d(self): return self.__view_rect[1] + self.__view_rect[3]
+
+    def get_xmin_3d(self): return self.__view_cuboid[0]
+    def get_xmax_3d(self): return self.__view_cuboid[0] + self.__view_cuboid[3]
+    def get_ymin_3d(self): return self.__view_cuboid[1]
+    def get_ymax_3d(self): return self.__view_cuboid[1] + self.__view_cuboid[4]
+    def get_zmin_3d(self): return self.__view_cuboid[2]
+    def get_zmax_3d(self): return self.__view_cuboid[2] + self.__view_cuboid[5]
+
     def get_lims(self):
-        return ((self.get_xmin(), self.get_xmax()), (self.get_ymin(), self.get_ymax()))
+        if not self.__mode in [TabMode.TWO_D, TabMode.THREE_D]: return None
+        if self.__mode is TabMode.TWO_D:
+            return ((self.get_xmin_2d(), self.get_xmax_2d()), \
+                (self.get_ymin_2d(), self.get_ymax_2d()))
+        if self.__mode is TabMode.THREE_D:
+            return ((self.get_xmin_3d(), self.get_xmax_3d()), \
+                (self.get_ymin_3d(), self.get_ymax_3d()), \
+                (self.get_zmin_3d(), self.get_zmax_3d()))

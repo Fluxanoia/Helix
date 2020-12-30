@@ -3,15 +3,18 @@ from mpl_toolkits.mplot3d.axes3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from sympy import Expr, sympify
+from sympy import sympify, symbols
 from sympy.plotting.plot import _matplotlib_list, check_arguments, \
-    LineOver1DRangeSeries
+    LineOver1DRangeSeries, SurfaceOver2DRangeSeries
 
 from utils.theme import Theme
+from utils.parsing import Dimension
 
 class HelixPlot(FigureCanvasTkAgg):
 
     __figure = mpl.figure.Figure()
+    __axis2 = None
+    __axis3 = None
     __axis = None
 
     __data = []
@@ -22,71 +25,154 @@ class HelixPlot(FigureCanvasTkAgg):
 
     __xlim = (-10, 10)
     __ylim = (-10, 10)
+    __zlim = (-10, 10)
 
-    def __init__(self, parent, press_func, drag_func):
+    __elev = 30
+    __azim = -60
+
+    __dim = None
+
+    __presser = None
+    __dragger = None
+    __zoomer = None
+
+    def __init__(self, parent, press_func, drag_func, zoom_func):
         super().__init__(self.__figure, master = parent)
         Theme.getInstance().configureFigure(self.__figure)
+
+        self.__axis2 = mpl.axes.Axes(self.__figure, (0, 0, 1, 1))
+        Theme.getInstance().configurePlot2D(self.__axis2)
+
+        self.__axis3 = Axes3D(self.__figure, (0, 0, 1, 1))
+        Theme.getInstance().configurePlot3D(self.__axis3)
 
         def presser(e):
             self.get_tk_widget().focus_set()
             press_func(e)
+        self.__presser = presser
 
         def dragger(e):
-            x, y = drag_func(e)
-            self.set_limits(x, y)
+            if self.__dim is Dimension.TWO_D:
+                x, y = drag_func(e)
+                self.set_limits(x, y)
+            if self.__dim is Dimension.THREE_D:
+                e, a = drag_func(e)
+                self.set_view(e, a)
+        self.__dragger = dragger
 
-        self.get_tk_widget().bind("<ButtonPress-1>", presser)
-        self.get_tk_widget().bind("<B1-Motion>", dragger)
+        def zoomer(e):
+            if self.__dim is Dimension.TWO_D:
+                x, y = zoom_func(e)
+                self.set_limits(x, y)
+            if self.__dim is Dimension.THREE_D:
+                x, y, z = zoom_func(e)
+                print(x, y, z)
+                self.set_limits(x, y, z)
+        self.__zoomer = zoomer
+
+        self.get_tk_widget().bind("<ButtonPress-1>", self.__presser)
+        self.get_tk_widget().bind("<B1-Motion>", self.__dragger)
+        self.get_tk_widget().bind('<Enter>', self.__bind_scroll)
+        self.get_tk_widget().bind('<Leave>', self.__unbind_scroll)
 
     def widget(self):
         return self.get_tk_widget()
 
-    def set_limits(self, xlim, ylim):
+    def __bind_scroll(self, _event):
+        self.get_tk_widget().bind_all("<MouseWheel>", self.__zoomer)
+        self.get_tk_widget().bind_all("<Button-4>", self.__zoomer)
+        self.get_tk_widget().bind_all("<Button-5>", self.__zoomer)
+
+    def __unbind_scroll(self, _event):
+        self.get_tk_widget().unbind_all("<MouseWheel>")
+        self.get_tk_widget().unbind_all("<Button-4>")
+        self.get_tk_widget().unbind_all("<Button-5>")
+
+    # Plot Variables
+
+    def set_limits(self, xlim, ylim, zlim = None):
         if not (self.__is_real(xlim) and self.__is_real(ylim)):
             raise ValueError("Non-real limits in HelixPlot.")
         if not (self.__is_finite(xlim) and self.__is_finite(ylim)):
             raise ValueError("Infinite limits in HelixPlot.")
+        if zlim is not None:
+            if not (self.__is_finite(zlim) and self.__is_finite(zlim)):
+                raise ValueError("Infinite limits in HelixPlot.")
         self.__xlim = xlim
         self.__ylim = ylim
+        self.__zlim = zlim
         self.redraw()
+
+    def set_view(self, elev, azim):
+        self.__elev = elev
+        self.__azim = azim
+        self.redraw()
+
+    def set_dim(self, dim):
+        if self.__dim == dim: return
+        self.__dim = dim
+        self.__figure.clf()
+        self.__axis = None
+        if self.__dim is Dimension.TWO_D:
+            self.__axis = self.__axis2
+        if self.__dim is Dimension.THREE_D:
+            self.__axis = self.__axis3
+        if self.__dim is not None:
+            self.__figure.add_axes(self.__axis)
+
+    # Plotting
+
+    def __process_exprs(self, exprs):
+        free = set()
+        exprs = list(map(sympify, exprs))
+        for e in exprs: free |= e.free_symbols
+        return exprs, free
 
     def remove_plots(self):
         self.__data = []
-        self.redraw()
+        if self.__dim is not None: self.__axis.clear()
 
-    def set_plots(self, exprs):
-        self.__data = []
-        self.add_plots(exprs)
+    def add_plots_2d(self, exprs):
+        if self.__dim is not Dimension.TWO_D:
+            raise ValueError("Incorrect plot dimension.")
 
-    def add_plots(self, exprs):
-        if self.__axis is None:
-            self.__axis = mpl.axes.Axes(self.__figure, (0, 0, 1, 1))
-            Theme.getInstance().configurePlot2D(self.__axis)
-            self.__figure.add_axes(self.__axis)
-        if isinstance(self.__axis, Axes3D):
-            raise ValueError("Cannot mix 2D and 3D in HelixPlot.")
+        x = symbols('x')
+        exprs, free = self.__process_exprs(exprs)
+        if (len(free) != 1) or (not x in free):
+            raise ValueError("Incorrect free variables.")
 
-        exprs = list(map(sympify, exprs))
-        free = set()
-        for a in filter(lambda a : isinstance(a, Expr), exprs):
-            free |= a.free_symbols
-            if len(free) > 1:
-                raise ValueError("Too many free variables in HelixPlot.add_plot")
         self.__data.extend([(expr, LineOver1DRangeSeries(*expr)) \
             for expr in check_arguments(exprs, 1, 1)])
 
-        self.redraw()
-        # create plots, add to data
-        # dimension checks, axis swaps
-        # labels and colors ?
+    def add_plots_3d(self, exprs):
+        if self.__dim is not Dimension.THREE_D:
+            raise ValueError("Incorrect plot dimension.")
+
+        x, y = symbols('x y')
+        exprs, free = self.__process_exprs(exprs)
+        for f in free:
+            if f not in [x, y]:
+                raise ValueError("Incorrect free variables.")
+
+        self.__data.extend([(expr, SurfaceOver2DRangeSeries(*expr)) \
+            for expr in check_arguments(exprs, 1, 2)])
 
     def redraw(self):
-        if self.__axis is not None: self.__axis.clear()
+        if self.__dim is None: return
+
+        self.__axis.clear()
 
         for (_e, s) in self.__data:
-            if s.is_2Dline:
+            if s.is_3D:
                 s.start = self.__xlim[0]
                 s.end = self.__xlim[1]
+            else:
+                s.start_x = self.__xlim[0]
+                s.end_x = self.__xlim[1]
+                s.start_y = self.__ylim[0]
+                s.end_y = self.__ylim[1]
+
+            if s.is_2Dline:
                 collection = mpl.collections.LineCollection(s.get_segments())
                 self.__axis.add_collection(collection)
             elif s.is_contour:
@@ -113,9 +199,14 @@ class HelixPlot(FigureCanvasTkAgg):
                         self.__axis.contourf(xarray, yarray, zarray, cmap = colormap)
             else: raise NotImplementedError("Unimplemented plot type in HelixPlot")
 
-        if self.__axis is not None:
+        if self.__dim is Dimension.TWO_D:
             self.__axis.spines['left'].set_position('center')
             self.__axis.spines['bottom'].set_position('center')
-            self.__axis.set_xlim(self.__xlim)
-            self.__axis.set_ylim(self.__ylim)
+
+        self.__axis.set_xlim(self.__xlim)
+        self.__axis.set_ylim(self.__ylim)
+        if self.__dim is Dimension.THREE_D:
+            self.__axis.set_zlim(self.__zlim)
+            self.__axis.view_init(self.__elev, self.__azim)
+
         self.draw()

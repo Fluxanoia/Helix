@@ -1,4 +1,5 @@
 import tkinter as tk
+from utils.parsing import Dimension
 
 from utils.theme import Theme
 from utils.images import ImageManager
@@ -47,7 +48,8 @@ class EquationViewer(tk.Frame):
             relheight = 1 - self.__bar_height)
         self.__plot = HelixPlot(self.__frame,
             lambda e : self.__selected_tab.drag_start(e),
-            lambda e : self.__selected_tab.drag(e))
+            lambda e : self.__selected_tab.drag(e),
+            lambda e : self.__selected_tab.zoom(e))
 
     def __constructTabBar(self):
         self.__tab_bar = tk.Frame(self)
@@ -131,8 +133,16 @@ class EquationViewer(tk.Frame):
 
         if none: self.__widget = self.__mode_selector
         if empty: self.__widget = self.__empty_message
-        if plot2d: self.__plot.set_plots(self.__selected_tab.get_plots())
-        if plot3d: raise NotImplementedError("3d not ready")
+        if plot2d:
+            self.__plot.set_dim(Dimension.TWO_D)
+            self.__plot.remove_plots()
+            self.__plot.add_plots_2d(self.__selected_tab.get_plots())
+            self.__plot.redraw()
+        if plot3d:
+            self.__plot.set_dim(Dimension.THREE_D)
+            self.__plot.remove_plots()
+            self.__plot.add_plots_3d(self.__selected_tab.get_plots())
+            self.__plot.redraw()
         if plot2d or plot3d: self.__widget = self.__plot.widget()
 
         if any([none, empty, plot2d, plot3d]):
