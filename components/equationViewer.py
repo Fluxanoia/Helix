@@ -48,7 +48,7 @@ class EquationViewer(tk.Frame):
             relheight = 1 - self.__bar_height)
         self.__plot = HelixPlot(self.__frame,
             lambda e : self.__selected_tab.drag_start(e),
-            lambda e : self.__selected_tab.drag(e),
+            lambda e, w, h : self.__selected_tab.drag(e, w, h),
             lambda e : self.__selected_tab.zoom(e))
 
     def __constructTabBar(self):

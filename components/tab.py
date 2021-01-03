@@ -25,7 +25,6 @@ class Tab(tk.Button):
     __view_cuboid = [-10, -10, -10, 20, 20, 20]
 
     __drag_pos = None
-    __drag_scale_2d = 800
     __drag_scale_3d = 20
 
 
@@ -39,18 +38,18 @@ class Tab(tk.Button):
     def drag_start(self, e):
         self.__drag_pos = (e.x, e.y)
 
-    def drag(self, e):
+    def drag(self, e, w, h):
         if not self.__mode in [TabMode.TWO_D, TabMode.THREE_D]: return
         if self.__mode == TabMode.TWO_D:
             self.__view_rect[0] += (self.__drag_pos[0] - e.x) \
-                * (self.__view_rect[2] / self.__drag_scale_2d)
+                * (self.__view_rect[2] / w)
             self.__view_rect[1] += (e.y - self.__drag_pos[1]) \
-                * (self.__view_rect[3] / self.__drag_scale_2d)
+                * (self.__view_rect[3] / h)
             self.__drag_pos = (e.x, e.y)
             return self.get_lims()
         if self.__mode == TabMode.THREE_D:
-            self.__azim += (self.__drag_pos[0] - e.x) / self.__drag_scale_3d
-            self.__elev += (e.y - self.__drag_pos[1]) / self.__drag_scale_3d
+            self.__azim += (self.__drag_pos[0] - e.x) / (self.__drag_scale_3d / w)
+            self.__elev += (e.y - self.__drag_pos[1]) / (self.__drag_scale_3d / h)
             self.__drag_pos = (e.x, e.y)
             return (self.get_elev(), self.get_azim())
 

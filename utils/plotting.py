@@ -1,3 +1,5 @@
+import tkinter as tk
+
 import matplotlib as mpl
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
@@ -52,11 +54,14 @@ class HelixPlot(FigureCanvasTkAgg):
         self.__presser = presser
 
         def dragger(e):
+            self.widget().update()
+            w = self.widget().winfo_width()
+            h = self.widget().winfo_height()
             if self.__dim is Dimension.TWO_D:
-                x, y = drag_func(e)
+                x, y = drag_func(e, w, h)
                 self.set_limits(x, y)
             if self.__dim is Dimension.THREE_D:
-                e, a = drag_func(e)
+                e, a = drag_func(e, w, h)
                 self.set_view(e, a)
         self.__dragger = dragger
 
