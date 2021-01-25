@@ -168,7 +168,7 @@ class HelixPlot(FigureCanvasTkAgg):
         self.__axis.clear()
 
         for (_e, s) in self.__data:
-            if s.is_3D:
+            if not s.is_3D:
                 s.start = self.__xlim[0]
                 s.end = self.__xlim[1]
             else:
@@ -205,13 +205,19 @@ class HelixPlot(FigureCanvasTkAgg):
             else: raise NotImplementedError("Unimplemented plot type in HelixPlot")
 
         if self.__dim is Dimension.TWO_D:
+            self.__axis.set_xlim(self.__xlim)
+            self.__axis.set_ylim(self.__ylim)
             self.__axis.spines['left'].set_position('center')
             self.__axis.spines['bottom'].set_position('center')
 
-        self.__axis.set_xlim(self.__xlim)
-        self.__axis.set_ylim(self.__ylim)
         if self.__dim is Dimension.THREE_D:
+            self.__axis.set_xlim(self.__xlim)
+            self.__axis.set_ylim(self.__ylim)
             self.__axis.set_zlim(self.__zlim)
             self.__axis.view_init(self.__elev, self.__azim)
+
+            self.__axis.set_xlabel('$x$', fontsize = 20)
+            self.__axis.set_ylabel('$y$', fontsize = 20)
+            self.__axis.set_zlabel('$z$', fontsize = 20)
 
         self.draw()

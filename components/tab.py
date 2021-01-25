@@ -25,7 +25,7 @@ class Tab(tk.Button):
     __view_cuboid = [-10, -10, -10, 20, 20, 20]
 
     __drag_pos = None
-    __drag_scale_3d = 20
+    __drag_scale_3d = 800
 
 
     def __init__(self, parent, select):

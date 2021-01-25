@@ -81,6 +81,7 @@ class Theme:
         a.set_facecolor(self.getViewerFace())
 
         a.xaxis.label.set_color(self.getViewerSpine())
+        a.xaxis.label.set_color(self.getViewerSpine())
         a.yaxis.label.set_color(self.getViewerSpine())
         a.zaxis.label.set_color(self.getViewerSpine())
         a.tick_params(axis = 'x', colors = self.getViewerSpine())

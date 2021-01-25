@@ -1,3 +1,10 @@
 # Helix
 
-## Graphing Software by Tyler Wright
+## Libraries
+
+Helix is built using:
+
+- numpy
+- matplotlib
+- sympy
+- PyInstaller
