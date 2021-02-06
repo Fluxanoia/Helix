@@ -69,6 +69,7 @@ class EquationViewer(tk.Frame):
 
         self.__addTab()
         self.__select(self.__tabs[0])
+        self.__modeSwitcher(TabMode.TWO_D)
 
     def __modeSwitcher(self, mode):
         self.__selected_tab.switch_mode(mode)

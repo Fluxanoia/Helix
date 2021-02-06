@@ -1,6 +1,9 @@
 import tkinter as tk
 
+import sympy as sy
+
 from utils.theme import Theme
+from utils.parsing import Parser, Parsed
 from utils.fonts import FontManager
 
 from components.equation import Equation
@@ -40,6 +43,9 @@ class EquationEditor(ScrollableFrame):
             relwidth = width,
             relheight = self.__add_button_height)
 
+        self.__add_entry()
+        self.__entries[-1].force_text("x^2 + 1")
+
     def __add_entry(self):
         self.__entries.append(Equation(
             self.getInnerFrame(),
@@ -57,8 +63,60 @@ class EquationEditor(ScrollableFrame):
             e.configure(width = self.__entry_width)
 
     def __update(self):
-        plots = []
+        parser = Parser.getInstance()
+
+        bound = []
+        bindings = []
+        plottable = []
+
+        def rm_dupes_gen(var):
+            def rm_dupes(b, v = var):
+                rm = b[0] == v
+                if rm: b[2].label("Multiple definitions.")
+                return rm
+            return rm_dupes
+
         for e in self.__entries:
-            plot = e.get_parsed()
-            if plot is not None: plots.append(plot)
-        self.__plotter(plots)
+            p = e.get_parsed()
+            if p is None: continue
+
+            if p.has_binding():
+                bind = p.get_binding()
+                if bind[0] == parser.get_symbol_y():
+                    plottable.append(Parsed(str(bind[1])))
+                else:
+                    bindings.append([bind[0], bind[1], e])
+                    if bind[0] in bound:
+                        bound.remove(bind[0])
+                        bindings = list(filter(rm_dupes_gen(bind[0]), bindings))
+                    else:
+                        bound.append(bind[0])
+            elif p.has_dim():
+                plottable.append(p)
+
+        while len(bindings) > 0:
+            done = []
+            for b in bindings:
+                fv = [] if not isinstance(b[1], sy.Expr) else \
+                    list(filter(lambda s : not s in parser.get_default_symbols(),
+                        b[1].free_symbols))
+                if len(fv) == 0:
+                    xy = [] if not isinstance(b[1], sy.Expr) else \
+                        list(filter(lambda s : s in parser.get_default_symbols(),
+                            b[1].free_symbols))
+                    if len(xy) == 0:
+                        b[2].label(b[1])
+                    done.append(b)
+            if len(done) == 0: break
+            for d in done:
+                bindings.remove(d)
+                for b in bindings:
+                    b[1] = b[1].subs([(d[0], d[1])])
+                for p in plottable:
+                    p.subs([(d[0], d[1])])
+
+        for (_, _, e) in bindings:
+            e.label("Unresolvable.")
+
+        plottable = list(filter(lambda p : len(p.get_free_symbols()) == 0, plottable))
+        self.__plotter(plottable)

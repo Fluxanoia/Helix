@@ -1,5 +1,6 @@
 import enum
 
+import numpy as np
 import sympy as sy
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.parsing.sympy_parser import standard_transformations, \
@@ -16,6 +17,12 @@ class Parser:
         function_exponentiation, \
         convert_xor)
 
+    __comparatives = None
+
+    __x = None
+    __y = None
+    __def_bindings = None
+
     @staticmethod
     def getInstance():
         if Parser.__instance is None:
@@ -25,11 +32,29 @@ class Parser:
     def __init__(self):
         if Parser.__instance is not None:
             raise Exception("Invalid initialistion of Parser.")
+        self.__comparatives = ['<', '>', '=']
+        self.__x, self.__y = sy.symbols('x y')
+        e, pi = sy.symbols('e pi')
+        self.__def_bindings = [(e, np.exp(1)), (pi, np.pi)]
         Parser.__instance = self
 
     def parse(self, expr):
         return sy.sympify(parse_expr(expr,
             transformations = self.__transformations))
+
+    def get_comparatives(self):
+        return self.__comparatives
+
+    def get_symbol_x(self):
+        return self.__x
+    def get_symbol_y(self):
+        return self.__y
+
+    def get_default_symbols(self):
+        return [self.__x, self.__y]
+
+    def get_default_bindings(self):
+        return self.__def_bindings
 
 class ParseMode(enum.Enum):
     NORMAL      = 0
@@ -41,10 +66,10 @@ class Dimension(enum.Enum):
 
 class Parsed:
 
-    __comparatives = ['<', '>', '=']
-
-    __comparative = None
+    __raw = None
     __blocks = []
+    __comparative = None
+    __restrictions = []
 
     __dim = None
 
@@ -54,76 +79,137 @@ class Parsed:
     __error = None
 
     def __init__(self, expr):
+        self.__raw = expr
+        self.eval()
+
+    def eval(self):
+        parser = Parser.getInstance()
+        self.__blocks = []
+        self.__comparative = None
+        self.__restrictions = []
+        self.__dim = None
+        self.__binds = None
+        self.__value = None
+        self.__error = None
+        # Partition the raw expression
+        parsed_norm = ""
+        parsed_comp = ""
         mode = ParseMode.NORMAL
-
-        x, y = sy.symbols('x y')
-
-        comp = None
-        blocks = []
-        restrictions = []
-
-        curr_norm = ""
-        curr_comp = ""
-        for s in expr:
+        for s in self.__raw:
             if mode == ParseMode.NORMAL:
-                if s in self.__comparatives:
-                    if comp is not None and comp != s:
+                if s in parser.get_comparatives():
+                    if (self.__comparative is not None) and (self.__comparative != s):
                         self.__error = "Inconsistent comparatives."
                         return
-                    comp = s
-                    blocks.append(curr_norm)
-                    curr_norm = ""
+                    self.__comparative = s
+                    self.__blocks.append(parsed_norm)
+                    parsed_norm = ""
                 elif s == '{':
                     mode = ParseMode.COMPARATIVE
                 else:
-                    curr_norm += s
+                    parsed_norm += s
             elif mode == ParseMode.COMPARATIVE:
                 if s == '}':
                     mode = ParseMode.NORMAL
-                    restrictions.append(curr_comp)
-                    curr_comp = ""
+                    self.__restrictions.append(parsed_comp)
+                    parsed_comp = ""
                 else:
-                    curr_comp += s
+                    parsed_comp += s
             else:
                 raise ValueError("Unknown ParseMode in Parsed.")
-        if len(curr_norm) != 0:
-            blocks.append(curr_norm)
-        if len(curr_comp) != 0:
+        if len(parsed_norm) != 0:
+            self.__blocks.append(parsed_norm)
+        if len(parsed_comp) != 0:
             self.__error = "Unmatched braces."
             return
-
-        for i in range(len(blocks)):
+        # Parse the partitioned blocks
+        for i in range(len(self.__blocks)):
             try:
-                blocks[i] = Parser.getInstance().parse(blocks[i])
+                self.__blocks[i] = Parser.getInstance().parse(self.__blocks[i])
+                self.__blocks[i] = self.__blocks[i].subs(parser.get_default_bindings())
             except SyntaxError:
                 self.__error = "Syntax error."
                 return
             except:
                 self.__error = "Error."
                 return
-
-        self.__blocks = blocks
-
-        if len(blocks) == 0:
-            return None
-        elif len(blocks) == 1:
-            symbols = list(filter(lambda s : s in [x, y],
-                blocks[0].free_symbols))
-            if len(symbols) == 0:
+        # Evaluate the blocks
+        xy = self.get_xy_symbols()
+        fv = self.get_free_symbols()
+        if len(self.__blocks) == 0:
+            self.__error = "Empty."
+        elif len(self.__blocks) == 1:
+            if len(xy) == 0:
                 try:
-                    self.__value = blocks[0].evalf()
+                    self.__value = self.__blocks[0].evalf()
+                    self.__dim = 2
                 except TypeError:
                     self.__value = None
                     self.__error = "Evaluation error."
-            elif len(symbols) == 1:
-                if symbols[0] == x: self.__dim = 2
-            elif len(symbols) == 2:
+            elif len(xy) == 1:
+                if xy[0] == parser.get_symbol_x(): self.__dim = 2
+            elif len(xy) == 2:
                 self.__dim = 3
-        elif len(blocks) == 2:
-            return None
+        elif len(self.__blocks) == 2 and parser.get_symbol_y() in xy:
+            self.__bind(parser.get_symbol_y(),
+                    sy.solve(sy.Eq(self.__blocks[0], self.__blocks[1]), parser.get_symbol_y()))
+        elif len(self.__blocks) == 2 and parser.get_symbol_x() in xy:
+            try:
+                self.__value = list(sy.solveset(sy.Eq(self.__blocks[0], self.__blocks[1]),
+                    parser.get_symbol_x(), domain = sy.S.Reals))
+            except TypeError:
+                self.__value = None
+                self.__error = "Evaluation error."
+        elif len(self.__blocks) == 2 and len(fv) == 0:
+            self.__value = 1 if sy.Eq(self.__blocks[0], self.__blocks[1]) else 0
+        elif len(self.__blocks) == 2:
+            bvar = None
+            lhs_free = list(filter(lambda s : not (s in parser.get_default_symbols()),
+                self.__blocks[0].free_symbols))
+            if len(lhs_free) == 1:
+                bvar = lhs_free[0]
+            else:
+                rhs_free = list(filter(lambda s : not (s in parser.get_default_symbols()),
+                    self.__blocks[1].free_symbols))
+                if len(rhs_free) == 1:
+                    bvar = rhs_free[0]
+                else:
+                    self.__error = "Too many LHS free variables."
+            if bvar is not None:
+                self.__bind(bvar, sy.solve(sy.Eq(self.__blocks[0], self.__blocks[1]), bvar))
+        elif len(self.__blocks) == 3:
+            pass
         else:
             self.__error = "Too many chained expressions."
-            return None
+
+    def __bind(self, bvar, bbody):
+        if isinstance(bbody, list):
+            if len(bbody) == 0:
+                self.__error = "No solutions for " + str(bvar) + "."
+            if len(bbody) == 1:
+                bbody = bbody[0]
+        self.__binds = (bvar, bbody)
+
+    def subs(self, subst):
+        for i in range(len(self.__blocks)):
+            self.__blocks[i] = self.__blocks[i].subs(subst)
+
+    def get_symbols(self):
+        symbols = set()
+        if not self.has_error():
+            for b in self.__blocks:
+                symbols = symbols.union(set(b.free_symbols))
+        return list(symbols)
+
+    def get_xy_symbols(self):
+        parser = Parser.getInstance()
+        return list(filter(lambda s : s in parser.get_default_symbols(),
+            self.get_symbols()))
+
+    def get_free_symbols(self):
+        parser = Parser.getInstance()
+        return list(filter(lambda s : not (s in parser.get_default_symbols()),
+            self.get_symbols()))
 
     def get_comparative(self):
         return self.__comparative
@@ -131,6 +217,8 @@ class Parsed:
     def get_blocks(self):
         return self.__blocks
 
+    def has_binding(self):
+        return self.__binds is not None
     def get_binding(self):
         return self.__binds
 

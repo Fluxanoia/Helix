@@ -1,5 +1,3 @@
-import tkinter as tk
-
 import matplotlib as mpl
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
@@ -79,6 +77,8 @@ class HelixPlot(FigureCanvasTkAgg):
         self.get_tk_widget().bind("<B1-Motion>", self.__dragger)
         self.get_tk_widget().bind('<Enter>', self.__bind_scroll)
         self.get_tk_widget().bind('<Leave>', self.__unbind_scroll)
+
+        self.draw()
 
     def widget(self):
         return self.get_tk_widget()

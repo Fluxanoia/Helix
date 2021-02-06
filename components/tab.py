@@ -27,7 +27,6 @@ class Tab(tk.Button):
     __drag_pos = None
     __drag_scale_3d = 800
 
-
     def __init__(self, parent, select):
         super().__init__(parent,
             text = "Tab",

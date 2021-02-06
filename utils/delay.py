@@ -11,7 +11,8 @@ class DelayTracker:
         w.after_cancel(i)
         self.removeDelay(w, i)
     def removeDelay(self, w, i):
-        self.__delays.remove((w, i))
+        if ((w, i) in self.__delays):
+            self.__delays.remove((w, i))
 
     def endAll(self):
         for d in self.__delays:

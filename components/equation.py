@@ -78,11 +78,11 @@ class Equation(tk.Frame):
 
     def __place_buttons(self):
         for i in range(len(self.__leftButtons)):
-            self.__place_buttonLeft(self.__leftButtons[i], i)
+            self.__place_button_left(self.__leftButtons[i], i)
         for i in range(len(self.__rightButtons)):
-            self.__place_buttonRight(self.__rightButtons[i], i)
+            self.__place_button_right(self.__rightButtons[i], i)
 
-    def __place_buttonLeft(self, button, count):
+    def __place_button_left(self, button, count):
         button.place(anchor = tk.SW,
             x = self.__button_size * count,
             relx = self.__paddingx * (count + 1),
@@ -90,7 +90,7 @@ class Equation(tk.Frame):
             w = self.__button_size,
             h = self.__button_size)
 
-    def __place_buttonRight(self, button, count = 0):
+    def __place_button_right(self, button, count = 0):
         button.place(anchor = tk.SE,
             x = self.__button_size * count,
             relx = 1 - self.__paddingx * (count + 1),
@@ -104,12 +104,24 @@ class Equation(tk.Frame):
         self.__debounce_id = self.after(self.__debounce_delay, self.__update)
         DelayTracker.getInstance().addDelay(self, self.__debounce_id)
 
+    def force_text(self, text):
+        self.__entry.delete(0, tk.END)
+        self.__entry.insert(0, text)
+
     def __update(self, *_args):
         DelayTracker.getInstance().removeDelay(self, self.__debounce_id)
         self.__debounce_id = None
 
         self.__parsed = Parsed(self.get_text())
-        self.label(":)")
+        if self.__parsed.has_error():
+            self.label(self.__parsed.get_error())
+        elif self.__parsed.has_binding():
+            self.label(str(self.__parsed.get_binding()[0]) \
+                + " = " + str(self.__parsed.get_binding()[1]))
+        elif len(self.__parsed.get_free_symbols()) > 0:
+            self.label("Unbound variables.")
+        else:
+            self.label(str(self.__parsed.get_value()))
 
         self.__update_fun()
 
