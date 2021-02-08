@@ -2,9 +2,9 @@ import enum
 
 import numpy as np
 import sympy as sy
+from sympy.core.function import UndefinedFunction
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.parsing.sympy_parser import standard_transformations, \
-    implicit_multiplication, \
     function_exponentiation, \
     convert_xor
 
@@ -13,7 +13,7 @@ class Parser:
     __instance = None
 
     __transformations = standard_transformations \
-        + (implicit_multiplication, \
+        + (\
         function_exponentiation, \
         convert_xor)
 
@@ -63,6 +63,40 @@ class ParseMode(enum.Enum):
 class Dimension(enum.Enum):
     TWO_D   = 2
     THREE_D = 3
+
+class Binding:
+
+    name = None
+    body = None
+    eq = None
+
+    def get_symbols(self):
+        return self.body.free_symbols
+
+    def get_xy_symbols(self):
+        parser = Parser.getInstance()
+        return list(filter(lambda s : s in parser.get_default_symbols(),
+            self.get_symbols()))
+
+    def get_free_symbols(self):
+        parser = Parser.getInstance()
+        return list(filter(lambda s : not (s in parser.get_default_symbols()),
+            self.get_symbols()))
+
+    def subs(self, subst):
+        self.body = self.body.subs(subst)
+
+    def replace(self, x, y):
+        self.body = self.body.replace(x, y)
+
+    def label(self, text):
+        self.eq.label(text)
+
+    def is_var(self):
+        return isinstance(self.name, sy.Symbol)
+
+    def is_func(self):
+        return isinstance(self.name, UndefinedFunction)
 
 class Parsed:
 
@@ -127,11 +161,8 @@ class Parsed:
             try:
                 self.__blocks[i] = Parser.getInstance().parse(self.__blocks[i])
                 self.__blocks[i] = self.__blocks[i].subs(parser.get_default_bindings())
-            except SyntaxError:
-                self.__error = "Syntax error."
-                return
-            except:
-                self.__error = "Error."
+            except Exception as e:
+                self.__error = type(e).__name__
                 return
         # Evaluate the blocks
         xy = self.get_xy_symbols()
@@ -150,6 +181,14 @@ class Parsed:
                 if xy[0] == parser.get_symbol_x(): self.__dim = 2
             elif len(xy) == 2:
                 self.__dim = 3
+        elif len(self.__blocks) == 2 and isinstance(self.__blocks[0], sy.Function):
+            args = self.__blocks[0].args
+            if not len(args) == len(set(args)):
+                self.__error = "Duplicate inputs."
+            else:
+                self.__binds = Binding()
+                self.__binds.name = sy.Function(self.__blocks[0].name)
+                self.__binds.body = sy.Lambda(args, self.__blocks[1])
         elif len(self.__blocks) == 2 and parser.get_symbol_y() in xy:
             self.__bind(parser.get_symbol_y(),
                     sy.solve(sy.Eq(self.__blocks[0], self.__blocks[1]), parser.get_symbol_y()))
@@ -188,11 +227,17 @@ class Parsed:
                 self.__error = "No solutions for " + str(bvar) + "."
             if len(bbody) == 1:
                 bbody = bbody[0]
-        self.__binds = (bvar, bbody)
+        self.__binds = Binding()
+        self.__binds.name = bvar
+        self.__binds.body = bbody
 
     def subs(self, subst):
         for i in range(len(self.__blocks)):
             self.__blocks[i] = self.__blocks[i].subs(subst)
+
+    def replace(self, x, y):
+        for i in range(len(self.__blocks)):
+            self.__blocks[i] = self.__blocks[i].replace(x, y)
 
     def get_symbols(self):
         symbols = set()

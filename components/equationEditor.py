@@ -82,38 +82,41 @@ class EquationEditor(ScrollableFrame):
 
             if p.has_binding():
                 bind = p.get_binding()
-                if bind[0] == parser.get_symbol_y():
-                    plottable.append(Parsed(str(bind[1])))
+                bind.eq = e
+                if bind.name == parser.get_symbol_y():
+                    plottable.append(Parsed(str(bind.body)))
                 else:
-                    bindings.append([bind[0], bind[1], e])
-                    if bind[0] in bound:
-                        bound.remove(bind[0])
-                        bindings = list(filter(rm_dupes_gen(bind[0]), bindings))
+                    bindings.append(bind)
+                    if bind.name in bound:
+                        bound.remove(bind.name)
+                        bindings = list(filter(rm_dupes_gen(bind.name), bindings))
                     else:
-                        bound.append(bind[0])
+                        bound.append(bind.name)
             elif p.has_dim():
                 plottable.append(p)
 
         while len(bindings) > 0:
             done = []
             for b in bindings:
-                fv = [] if not isinstance(b[1], sy.Expr) else \
-                    list(filter(lambda s : not s in parser.get_default_symbols(),
-                        b[1].free_symbols))
-                if len(fv) == 0:
-                    xy = [] if not isinstance(b[1], sy.Expr) else \
-                        list(filter(lambda s : s in parser.get_default_symbols(),
-                            b[1].free_symbols))
-                    if len(xy) == 0:
-                        b[2].label(b[1])
+                if len(b.get_free_symbols()) == 0:
+                    if len(b.get_xy_symbols()) == 0:
+                        if b.is_func():
+                            b.label("func_binding")
+                        elif b.is_var():
+                            b.label(b.body)
+                        else:
+                            raise ValueError("Unexpected binding type.")
                     done.append(b)
             if len(done) == 0: break
             for d in done:
                 bindings.remove(d)
-                for b in bindings:
-                    b[1] = b[1].subs([(d[0], d[1])])
-                for p in plottable:
-                    p.subs([(d[0], d[1])])
+                for x in bindings + plottable:
+                    if d.is_func():
+                        x.replace(d.name, d.body)
+                    elif d.is_var():
+                        x.subs((d.name, d.body))
+                    else:
+                        raise ValueError("Unexpected binding type.")
 
         for (_, _, e) in bindings:
             e.label("Unresolvable.")

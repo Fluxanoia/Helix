@@ -116,8 +116,8 @@ class Equation(tk.Frame):
         if self.__parsed.has_error():
             self.label(self.__parsed.get_error())
         elif self.__parsed.has_binding():
-            self.label(str(self.__parsed.get_binding()[0]) \
-                + " = " + str(self.__parsed.get_binding()[1]))
+            self.label(str(self.__parsed.get_binding().name) \
+                + " = " + str(self.__parsed.get_binding().body))
         elif len(self.__parsed.get_free_symbols()) > 0:
             self.label("Unbound variables.")
         else:
