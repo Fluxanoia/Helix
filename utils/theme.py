@@ -3,6 +3,7 @@ class Theme:
     __instance = None
 
     __editor_body = '#404040'
+    __editor_div = '#707070'
 
     __editor_button_body   = '#606060'
     __editor_button_active = '#808080'
@@ -27,6 +28,11 @@ class Theme:
 
     def getEditorBody(self):
         return self.__editor_body
+    def getEditorDivider(self):
+        return self.__editor_div
+    def configureEditorDivider(self, w):
+        w.configure(bg = self.getEditorDivider())
+        self.removeBorder(w)
     def configureEditor(self, w):
         w.configure(bg = self.getEditorBody())
         self.removeBorder(w)

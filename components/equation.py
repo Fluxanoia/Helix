@@ -14,6 +14,8 @@ class Equation(tk.Frame):
     # Main Widgets
     __entry = None
     __label = None
+    __inner = None
+    div = None
     # Button Widgets
     __colour_button = None
     __lock_button = None
@@ -29,74 +31,66 @@ class Equation(tk.Frame):
     __leftButtons = []
     __rightButtons = []
     # Placement
-    __button_size = 32
-    __paddingx = 0.02
-    __paddingy = 0.04
-    __bar_width = 0.1
+    __button_size = 24
+    __button_count = 4
+
+    __frame_pad = 8
+    __spacing = 8
 
     # Parsing
     __parsed = None
 
     def __init__(self, parent, update_fun, remove_func):
-        super().__init__(parent, bg = parent["bg"], height = 110)
+        super().__init__(parent)
 
         self.__update_fun = update_fun
         self.__remove_func = remove_func
 
+        self.__inner = tk.Frame(self, bg = parent["bg"],
+            padx = self.__frame_pad, pady = self.__frame_pad,
+            height = self.__button_size * self.__button_count \
+                + self.__spacing * (self.__button_count - 1) + self.__frame_pad * 2)
+        self.__inner.pack(anchor = tk.CENTER, fill = tk.BOTH, expand = True)
+
         self.__entry_var = tk.StringVar()
         self.__entry_var.trace('w', self.__debounce_update)
-        self.__entry = tk.Entry(self, textvariable = self.__entry_var)
+        self.__entry = tk.Entry(self.__inner, textvariable = self.__entry_var)
         FontManager.getInstance().configureText(self.__entry)
-        self.__entry.place(relx = self.__paddingx,
-            rely = self.__paddingy,
-            relwidth = 1 - self.__paddingx * 2)
+        self.__entry.place(x = self.__button_size + self.__spacing,
+            w = -(self.__button_size + self.__spacing),
+            relwidth = 1)
 
-        self.__label = tk.Label(self, text = "")
+        self.__label = tk.Label(self.__inner, text = "")
         FontManager.getInstance().configureText(self.__label)
-        self.__label.place(relx = self.__paddingx,
-            rely = self.__paddingy * 2 + 0.25,
-            relwidth = 1 - self.__paddingx * 2)
+        self.__label.place(x = self.__button_size + self.__spacing,
+            w = -(self.__button_size + self.__spacing),
+            y = self.__spacing,
+            rely = 0.25,
+            relwidth = 1)
 
         self.__colour_button = self.__create_button(lambda : None, "colour.png")
         self.__lock_button = self.__create_button(lambda : None, "lock.png")
         self.__hide_button = self.__create_button(lambda : None, "hide.png")
         self.__remove_button = self.__create_button(self.__remove, "remove.png")
 
-        self.__leftButtons = [self.__colour_button, self.__lock_button, self.__hide_button]
-        self.__rightButtons = [self.__remove_button]
-        self.__place_buttons()
+        buttons = [self.__colour_button, self.__lock_button, \
+            self.__hide_button, self.__remove_button]
+        for i in range(len(buttons)):
+            buttons[i].place(y = (self.__button_size + self.__spacing) * i,
+                w = self.__button_size, h = self.__button_size)
 
         self.pack(fill = tk.BOTH, expand = True)
 
     def __create_button(self, command, img_path):
-        return tk.Button(self,
+        return tk.Button(self.__inner,
             command = command,
             image = ImageManager.getInstance().getImage(
                 img_path,
                 self.__button_size,
                 self.__button_size))
 
-    def __place_buttons(self):
-        for i in range(len(self.__leftButtons)):
-            self.__place_button_left(self.__leftButtons[i], i)
-        for i in range(len(self.__rightButtons)):
-            self.__place_button_right(self.__rightButtons[i], i)
-
-    def __place_button_left(self, button, count):
-        button.place(anchor = tk.SW,
-            x = self.__button_size * count,
-            relx = self.__paddingx * (count + 1),
-            rely = 1 - self.__paddingy,
-            w = self.__button_size,
-            h = self.__button_size)
-
-    def __place_button_right(self, button, count = 0):
-        button.place(anchor = tk.SE,
-            x = self.__button_size * count,
-            relx = 1 - self.__paddingx * (count + 1),
-            rely = 1 - self.__paddingy,
-            w = self.__button_size,
-            h = self.__button_size)
+    def config_width(self, w):
+        self.__inner.configure(width = w)
 
     def __debounce_update(self, *_args):
         if self.__debounce_id is not None:

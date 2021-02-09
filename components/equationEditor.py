@@ -7,6 +7,13 @@ from utils.fonts import FontManager
 from components.equation import Equation
 from components.scrollableFrame import ScrollableFrame
 
+class EquationDivider(tk.Frame):
+
+    def __init__(self, parent):
+        super().__init__(parent, height = 4)
+        Theme.getInstance().configureEditorDivider(self)
+        self.pack(fill = tk.BOTH, expand = True)
+
 class EquationEditor(ScrollableFrame):
 
     # Plotting
@@ -16,6 +23,7 @@ class EquationEditor(ScrollableFrame):
     __entry_width = None
     __entry_button = None
     __entries = []
+    __dividers = []
 
     # Placement
     __add_button_height = 0.05
@@ -41,30 +49,33 @@ class EquationEditor(ScrollableFrame):
             relwidth = width,
             relheight = self.__add_button_height)
 
-        self.__add_entry("f(x) = x^2 + 1")
-        self.__add_entry("a = 3")
-        self.__add_entry("f(x)")
-        self.__add_entry("f(x / a)")
-        self.__add_entry("g(x, y) = sin(x) + cos(y)")
-        self.__add_entry("g(x, y)")
+        #self.__add_entry("f(x) = x^2 + 1")
+        #self.__add_entry("a = 3")
+        #self.__add_entry("f(x)")
+        #self.__add_entry("f(x / a)")
+        #self.__add_entry("g(x, y) = sin(x) + cos(y)")
+        #self.__add_entry("g(x, y)")
 
     def __add_entry(self, text = None):
-        self.__entries.append(Equation(
-            self.getInnerFrame(),
-            self.__update,
-            self.__remove_entry))
+        eq = Equation(self.getInnerFrame(), self.__update, self.__remove_entry)
+        eq.div = EquationDivider(self.getInnerFrame())
+        self.__dividers.append(eq.div)
+        self.__entries.append(eq)
         self.__entries[-1].configure(width = self.__entry_width)
         if text is not None:
             self.__entries[-1].force_text(text)
 
     def __remove_entry(self, entry):
+        if entry.div is not None:
+            entry.div.pack_forget()
+            self.__dividers.remove(entry.div)
         self.__entries.remove(entry)
         self.__update()
 
     def __entry_config(self, width):
         self.__entry_width = width
         for e in self.__entries:
-            e.configure(width = self.__entry_width)
+            e.config_width(self.__entry_width)
 
     def __update(self):
         parser = Parser.getInstance()
