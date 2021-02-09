@@ -3,12 +3,11 @@ from mpl_toolkits.mplot3d.axes3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from sympy import sympify, symbols
 from sympy.plotting.plot import _matplotlib_list, check_arguments, \
     LineOver1DRangeSeries, SurfaceOver2DRangeSeries
 
 from utils.theme import Theme
-from utils.parsing import Parser, Dimension
+from utils.parsing import Dimension
 
 class HelixPlot(FigureCanvasTkAgg):
 
@@ -46,6 +45,12 @@ class HelixPlot(FigureCanvasTkAgg):
         self.__axis3 = Axes3D(self.__figure, (0, 0, 1, 1))
         Theme.getInstance().configurePlot3D(self.__axis3)
 
+        self.__axis2.set_xlim(self.__xlim)
+        self.__axis2.set_ylim(self.__ylim)
+        self.__axis3.set_xlim(self.__xlim)
+        self.__axis3.set_ylim(self.__ylim)
+        self.__axis3.set_zlim(self.__zlim)
+
         def presser(e):
             self.get_tk_widget().focus_set()
             press_func(e)
@@ -69,7 +74,6 @@ class HelixPlot(FigureCanvasTkAgg):
                 self.set_limits(x, y)
             if self.__dim is Dimension.THREE_D:
                 x, y, z = zoom_func(e)
-                print(x, y, z)
                 self.set_limits(x, y, z)
         self.__zoomer = zoomer
 
@@ -126,12 +130,6 @@ class HelixPlot(FigureCanvasTkAgg):
             self.__figure.add_axes(self.__axis)
 
     # Plotting
-
-    def __process_exprs(self, exprs):
-        free = set()
-        exprs = list(map(sympify, exprs))
-        for e in exprs: free |= e.free_symbols
-        return exprs, free
 
     def remove_plots(self):
         self.__data = []
@@ -194,19 +192,19 @@ class HelixPlot(FigureCanvasTkAgg):
             else: raise NotImplementedError("Unimplemented plot type in HelixPlot")
 
         if self.__dim is Dimension.TWO_D:
-            self.__axis.set_xlim(self.__xlim)
-            self.__axis.set_ylim(self.__ylim)
-            self.__axis.spines['left'].set_position('center')
-            self.__axis.spines['bottom'].set_position('center')
+            self.__axis2.set_xlim(self.__xlim)
+            self.__axis2.set_ylim(self.__ylim)
+            self.__axis2.spines['left'].set_position('center')
+            self.__axis2.spines['bottom'].set_position('center')
 
         if self.__dim is Dimension.THREE_D:
-            self.__axis.set_xlim(self.__xlim)
-            self.__axis.set_ylim(self.__ylim)
-            self.__axis.set_zlim(self.__zlim)
-            self.__axis.view_init(self.__elev, self.__azim)
+            self.__axis3.set_xlim(self.__xlim)
+            self.__axis3.set_ylim(self.__ylim)
+            self.__axis3.set_zlim(self.__zlim)
+            self.__axis3.view_init(self.__elev, self.__azim)
 
-            self.__axis.set_xlabel('$x$', fontsize = 20)
-            self.__axis.set_ylabel('$y$', fontsize = 20)
-            self.__axis.set_zlabel('$z$', fontsize = 20)
+            self.__axis3.set_xlabel('$x$', fontsize = 20)
+            self.__axis3.set_ylabel('$y$', fontsize = 20)
+            self.__axis3.set_zlabel('$z$', fontsize = 20)
 
         self.draw()

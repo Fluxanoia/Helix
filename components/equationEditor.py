@@ -41,15 +41,21 @@ class EquationEditor(ScrollableFrame):
             relwidth = width,
             relheight = self.__add_button_height)
 
-        self.__add_entry()
-        self.__entries[-1].force_text("x^2 + 1")
+        self.__add_entry("f(x) = x^2 + 1")
+        self.__add_entry("a = 3")
+        self.__add_entry("f(x)")
+        self.__add_entry("f(x / a)")
+        self.__add_entry("g(x, y) = sin(x) + cos(y)")
+        self.__add_entry("g(x, y)")
 
-    def __add_entry(self):
+    def __add_entry(self, text = None):
         self.__entries.append(Equation(
             self.getInnerFrame(),
             self.__update,
             self.__remove_entry))
         self.__entries[-1].configure(width = self.__entry_width)
+        if text is not None:
+            self.__entries[-1].force_text(text)
 
     def __remove_entry(self, entry):
         self.__entries.remove(entry)
@@ -76,7 +82,7 @@ class EquationEditor(ScrollableFrame):
 
         for e in self.__entries:
             p = e.get_parsed()
-            p.eval()
+            if p is not None: p.eval()
             if p is None:
                 e.label("")
             elif p.has_error():
