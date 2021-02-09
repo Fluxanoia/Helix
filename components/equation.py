@@ -23,7 +23,7 @@ class Equation(tk.Frame):
     # Entry tracker
     __entry_var = None
     __debounce_id = None
-    __debounce_delay = 250
+    __debounce_delay = 500
 
     # Button Alignments
     __leftButtons = []
@@ -111,18 +111,7 @@ class Equation(tk.Frame):
     def __update(self, *_args):
         DelayTracker.getInstance().removeDelay(self, self.__debounce_id)
         self.__debounce_id = None
-
         self.__parsed = Parsed(self.get_text())
-        if self.__parsed.has_error():
-            self.label(self.__parsed.get_error())
-        elif self.__parsed.has_binding():
-            self.label(str(self.__parsed.get_binding().name) \
-                + " = " + str(self.__parsed.get_binding().body))
-        elif len(self.__parsed.get_free_symbols()) > 0:
-            self.label("Unbound variables.")
-        else:
-            self.label(str(self.__parsed.get_value()))
-
         self.__update_fun()
 
     def __remove(self):

@@ -2,7 +2,7 @@ import enum
 
 import numpy as np
 import sympy as sy
-from sympy.core.function import UndefinedFunction
+from sympy.core.function import UndefinedFunction, AppliedUndef
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.parsing.sympy_parser import standard_transformations, \
     function_exponentiation, \
@@ -13,9 +13,7 @@ class Parser:
     __instance = None
 
     __transformations = standard_transformations \
-        + (\
-        function_exponentiation, \
-        convert_xor)
+        + (function_exponentiation, convert_xor)
 
     __comparatives = None
 
@@ -71,7 +69,9 @@ class Binding:
     eq = None
 
     def get_symbols(self):
-        return self.body.free_symbols
+        var = set(self.body.free_symbols)
+        func = set(self.body.atoms(AppliedUndef))
+        return list(var.union(func))
 
     def get_xy_symbols(self):
         parser = Parser.getInstance()
@@ -84,10 +84,18 @@ class Binding:
             self.get_symbols()))
 
     def subs(self, subst):
-        self.body = self.body.subs(subst)
+        try:
+            self.body = self.body.subs(subst)
+        except Exception as e:
+            return type(e).__name__
+        return None
 
     def replace(self, x, y):
-        self.body = self.body.replace(x, y)
+        try:
+            self.body = self.body.replace(x, y)
+        except Exception as e:
+            return type(e).__name__
+        return None
 
     def label(self, text):
         self.eq.label(text)
@@ -99,6 +107,8 @@ class Binding:
         return isinstance(self.name, UndefinedFunction)
 
 class Parsed:
+
+    eq = None
 
     __raw = None
     __blocks = []
@@ -174,9 +184,9 @@ class Parsed:
                 try:
                     self.__value = self.__blocks[0].evalf()
                     self.__dim = 2
-                except TypeError:
-                    self.__value = None
-                    self.__error = "Evaluation error."
+                except Exception as e:
+                    self.__error = type(e).__name__
+                    return
             elif len(xy) == 1:
                 if xy[0] == parser.get_symbol_x(): self.__dim = 2
             elif len(xy) == 2:
@@ -196,9 +206,9 @@ class Parsed:
             try:
                 self.__value = list(sy.solveset(sy.Eq(self.__blocks[0], self.__blocks[1]),
                     parser.get_symbol_x(), domain = sy.S.Reals))
-            except TypeError:
-                self.__value = None
-                self.__error = "Evaluation error."
+            except Exception as e:
+                self.__error = type(e).__name__
+                return
         elif len(self.__blocks) == 2 and len(fv) == 0:
             self.__value = 1 if sy.Eq(self.__blocks[0], self.__blocks[1]) else 0
         elif len(self.__blocks) == 2:
@@ -233,17 +243,28 @@ class Parsed:
 
     def subs(self, subst):
         for i in range(len(self.__blocks)):
-            self.__blocks[i] = self.__blocks[i].subs(subst)
+            try:
+                self.__blocks[i] = self.__blocks[i].subs(subst)
+            except Exception as e:
+                self.__error = type(e).__name__
+                return self.__error
+        return None
 
     def replace(self, x, y):
         for i in range(len(self.__blocks)):
-            self.__blocks[i] = self.__blocks[i].replace(x, y)
+            try:
+                self.__blocks[i] = self.__blocks[i].replace(x, y)
+            except Exception as e:
+                self.__error = type(e).__name__
+                return self.__error
+        return None
 
     def get_symbols(self):
         symbols = set()
         if not self.has_error():
             for b in self.__blocks:
                 symbols = symbols.union(set(b.free_symbols))
+                symbols = symbols.union(set(b.atoms(AppliedUndef)))
         return list(symbols)
 
     def get_xy_symbols(self):
@@ -281,3 +302,8 @@ class Parsed:
         return self.__error is not None
     def get_error(self):
         return self.__error
+
+    def __str__(self):
+        s = ""
+        for b in self.__blocks: s += str(b) + " "
+        return s

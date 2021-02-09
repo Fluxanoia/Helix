@@ -1,7 +1,5 @@
 import tkinter as tk
 
-import sympy as sy
-
 from utils.theme import Theme
 from utils.parsing import Parser, Parsed
 from utils.fonts import FontManager
@@ -78,13 +76,19 @@ class EquationEditor(ScrollableFrame):
 
         for e in self.__entries:
             p = e.get_parsed()
-            if p is None: continue
-
-            if p.has_binding():
+            p.eval()
+            if p is None:
+                e.label("")
+            elif p.has_error():
+                e.label(p.get_error())
+            elif p.has_binding():
                 bind = p.get_binding()
                 bind.eq = e
+                e.label(str(bind.name) + " = " + str(bind.body))
                 if bind.name == parser.get_symbol_y():
-                    plottable.append(Parsed(str(bind.body)))
+                    parsed = Parsed(str(bind.body))
+                    parsed.eq = e
+                    plottable.append(parsed)
                 else:
                     bindings.append(bind)
                     if bind.name in bound:
@@ -93,7 +97,10 @@ class EquationEditor(ScrollableFrame):
                     else:
                         bound.append(bind.name)
             elif p.has_dim():
+                p.eq = e
                 plottable.append(p)
+            else:
+                raise ValueError("Unhandled Parsed state.")
 
         while len(bindings) > 0:
             done = []
@@ -101,7 +108,7 @@ class EquationEditor(ScrollableFrame):
                 if len(b.get_free_symbols()) == 0:
                     if len(b.get_xy_symbols()) == 0:
                         if b.is_func():
-                            b.label("func_binding")
+                            b.label(str(b.name) + " = " + str(b.body))
                         elif b.is_var():
                             b.label(b.body)
                         else:
@@ -110,16 +117,30 @@ class EquationEditor(ScrollableFrame):
             if len(done) == 0: break
             for d in done:
                 bindings.remove(d)
+                rm = []
                 for x in bindings + plottable:
+                    err = None
                     if d.is_func():
-                        x.replace(d.name, d.body)
+                        err = x.replace(d.name, d.body)
                     elif d.is_var():
-                        x.subs((d.name, d.body))
+                        err = x.subs([(d.name, d.body)])
                     else:
                         raise ValueError("Unexpected binding type.")
+                    if err is not None:
+                        x.eq.label(err)
+                        rm.append(x)
+                for r in rm:
+                    if r in bindings: bindings.remove(r)
+                    if r in plottable: plottable.remove(r)
 
         for (_, _, e) in bindings:
             e.label("Unresolvable.")
+        for p in plottable:
+            fv = p.get_free_symbols()
+            if len(fv) == 0:
+                p.eq.label(str(p))
+            else:
+                p.eq.label("Unbound: " + str(fv))
 
         plottable = list(filter(lambda p : len(p.get_free_symbols()) == 0, plottable))
         self.__plotter(plottable)

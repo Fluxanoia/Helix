@@ -8,7 +8,7 @@ from sympy.plotting.plot import _matplotlib_list, check_arguments, \
     LineOver1DRangeSeries, SurfaceOver2DRangeSeries
 
 from utils.theme import Theme
-from utils.parsing import Dimension
+from utils.parsing import Parser, Dimension
 
 class HelixPlot(FigureCanvasTkAgg):
 
@@ -140,25 +140,14 @@ class HelixPlot(FigureCanvasTkAgg):
     def add_plots_2d(self, exprs):
         if self.__dim is not Dimension.TWO_D:
             raise ValueError("Incorrect plot dimension.")
-
-        x = symbols('x')
-        exprs, free = self.__process_exprs(exprs)
-        if (len(free) != 1) or (not x in free):
-            raise ValueError("Incorrect free variables.")
-
+        exprs = list(map(lambda p : p.get_blocks()[0], exprs))
         self.__data.extend([(expr, LineOver1DRangeSeries(*expr)) \
             for expr in check_arguments(exprs, 1, 1)])
 
     def add_plots_3d(self, exprs):
         if self.__dim is not Dimension.THREE_D:
             raise ValueError("Incorrect plot dimension.")
-
-        x, y = symbols('x y')
-        exprs, free = self.__process_exprs(exprs)
-        for f in free:
-            if f not in [x, y]:
-                raise ValueError("Incorrect free variables.")
-
+        exprs = list(map(lambda p : p.get_blocks()[0], exprs))
         self.__data.extend([(expr, SurfaceOver2DRangeSeries(*expr)) \
             for expr in check_arguments(exprs, 1, 2)])
 
