@@ -58,7 +58,7 @@ class ScrollableFrame(tk.Frame):
 
     def __mouse_scroll(self, event):
         if not self.__active_scroll:
-            return None
+            return
         self.__canvas.yview_scroll(1 if event.num == 5 or event.delta < 0 else -1, tk.UNITS)
 
     def getInnerFrame(self):

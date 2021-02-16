@@ -75,7 +75,7 @@ class EquationEditor(ScrollableFrame):
     def __entry_config(self, width):
         self.__entry_width = width
         for e in self.__entries:
-            e.config_width(self.__entry_width)
+            e.set_width(self.__entry_width)
 
     def __update(self):
         parser = Parser.getInstance()
@@ -104,7 +104,7 @@ class EquationEditor(ScrollableFrame):
                 e.label(str(bind.name) + " = " + str(bind.body))
                 if bind.name == parser.get_symbol_y():
                     parsed = Parsed(str(bind.body))
-                    parsed.eq = e
+                    p.transfer_data(parsed)
                     plottable.append(parsed)
                 else:
                     bindings.append(bind)
@@ -114,7 +114,6 @@ class EquationEditor(ScrollableFrame):
                     else:
                         bound.append(bind.name)
             elif p.has_dim():
-                p.eq = e
                 plottable.append(p)
             else:
                 raise ValueError("Unhandled Parsed state.")
@@ -160,4 +159,7 @@ class EquationEditor(ScrollableFrame):
                 p.eq.label("Unbound: " + str(fv))
 
         plottable = list(filter(lambda p : len(p.get_free_symbols()) == 0, plottable))
+        for p in plottable:
+            p.eq.set_plottable(True)
+        plottable = list(filter(lambda p : not p.eq.is_hidden(), plottable))
         self.__plotter(plottable)

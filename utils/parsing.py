@@ -278,6 +278,10 @@ class Parsed:
         return list(filter(lambda s : not (s in parser.get_default_symbols()),
             self.get_symbols()))
 
+    def transfer_data(self, p):
+        p.eq = self.eq
+        p.colour = self.colour
+
     def get_comparative(self):
         return self.__comparative
 
