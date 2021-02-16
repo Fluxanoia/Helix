@@ -109,6 +109,7 @@ class Binding:
 class Parsed:
 
     eq = None
+    colour = None
 
     __raw = None
     __blocks = []

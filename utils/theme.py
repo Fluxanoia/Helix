@@ -8,6 +8,7 @@ class Theme:
     __editor_button_body   = '#606060'
     __editor_button_active = '#808080'
     __editor_button_text   = '#FFFFFF'
+    __editor_readout_text  = '#707070'
 
     __viewer_body        = '#202020'
     __viewer_button_body = '#606060'
@@ -30,11 +31,20 @@ class Theme:
         return self.__editor_body
     def getEditorDivider(self):
         return self.__editor_div
+    def getEditorReadout(self):
+        return self.__editor_readout_text
     def configureEditorDivider(self, w):
         w.configure(bg = self.getEditorDivider())
         self.removeBorder(w)
     def configureEditor(self, w):
         w.configure(bg = self.getEditorBody())
+        self.removeBorder(w)
+    def configureEditorScale(self, w):
+        w.config(bg = self.getEditorBody(),
+            foreground = self.getEditorButtonText())
+        self.removeBorder(w)
+    def configureEditorReadout(self, w):
+        w.configure(foreground = self.getEditorReadout())
         self.removeBorder(w)
 
     def getEditorButtonBody(self):

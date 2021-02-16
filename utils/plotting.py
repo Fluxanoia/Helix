@@ -135,19 +135,19 @@ class HelixPlot(FigureCanvasTkAgg):
         self.__data = []
         if self.__dim is not None: self.__axis.clear()
 
-    def add_plots_2d(self, exprs):
+    def add_plots_2d(self, parsed):
         if self.__dim is not Dimension.TWO_D:
             raise ValueError("Incorrect plot dimension.")
-        exprs = list(map(lambda p : p.get_blocks()[0], exprs))
-        self.__data.extend([(expr, LineOver1DRangeSeries(*expr)) \
-            for expr in check_arguments(exprs, 1, 1)])
+        for p in parsed:
+            check = check_arguments([p.get_blocks()[0]], 1, 1)[0]
+            self.__data.append((check, LineOver1DRangeSeries(*check, line_color = p.colour)))
 
-    def add_plots_3d(self, exprs):
+    def add_plots_3d(self, parsed):
         if self.__dim is not Dimension.THREE_D:
             raise ValueError("Incorrect plot dimension.")
-        exprs = list(map(lambda p : p.get_blocks()[0], exprs))
-        self.__data.extend([(expr, SurfaceOver2DRangeSeries(*expr)) \
-            for expr in check_arguments(exprs, 1, 2)])
+        for p in parsed:
+            check = check_arguments([p.get_blocks()[0]], 1, 2)[0]
+            self.__data.append((check, SurfaceOver2DRangeSeries(*check, surface_color = p.colour)))
 
     def redraw(self):
         if self.__dim is None: return
@@ -165,7 +165,8 @@ class HelixPlot(FigureCanvasTkAgg):
                 s.end_y = self.__ylim[1]
 
             if s.is_2Dline:
-                collection = mpl.collections.LineCollection(s.get_segments())
+                collection = mpl.collections.LineCollection(s.get_segments(),
+                    colors = s.line_color)
                 self.__axis.add_collection(collection)
             elif s.is_contour:
                 self.__axis.contour(*s.get_meshes())
@@ -175,7 +176,7 @@ class HelixPlot(FigureCanvasTkAgg):
                 x, y, z = s.get_points()
             elif s.is_3Dsurface:
                 x, y, z = s.get_meshes()
-                collection = self.__axis.plot_surface(x, y, z,
+                self.__axis.plot_surface(x, y, z, color = s.surface_color,
                     rstride = 1, cstride = 1, linewidth = 0.1)
             elif s.is_implicit:
                 points = s.get_raster()
