@@ -49,12 +49,12 @@ class EquationEditor(ScrollableFrame):
             relwidth = width,
             relheight = self.__add_button_height)
 
-        self.__add_entry("f(x) = x^2 + 1")
-        self.__add_entry("a = 3")
-        self.__add_entry("f(x)")
-        self.__add_entry("f(x / a)")
-        self.__add_entry("g(x, y) = sin(x) + cos(y)")
-        self.__add_entry("g(x, y)")
+        #self.__add_entry("f(x) = x^2 + 1")
+        #self.__add_entry("a = 3")
+        #self.__add_entry("f(x)")
+        #self.__add_entry("f(x / a)")
+        #self.__add_entry("g(x, y) = sin(x) + cos(y)")
+        #self.__add_entry("g(x, y)")
 
     def __add_entry(self, text = None):
         eq = Equation(self.getInnerFrame(), self.__update, self.__remove_entry)
@@ -103,9 +103,12 @@ class EquationEditor(ScrollableFrame):
                 bind.eq = e
                 e.label(str(bind.name) + " = " + str(bind.body))
                 if bind.name == parser.get_symbol_y():
-                    parsed = Parsed(str(bind.body))
-                    p.transfer_data(parsed)
-                    plottable.append(parsed)
+                    body = bind.body
+                    if not isinstance(body, list): body = [body]
+                    for b in body:
+                        parsed = Parsed(str(b))
+                        p.transfer_data(parsed)
+                        plottable.append(parsed)
                 else:
                     bindings.append(bind)
                     if bind.name in bound:

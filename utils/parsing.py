@@ -201,8 +201,11 @@ class Parsed:
                 self.__binds.name = sy.Function(self.__blocks[0].name)
                 self.__binds.body = sy.Lambda(args, self.__blocks[1])
         elif len(self.__blocks) == 2 and parser.get_symbol_y() in xy:
-            self.__bind(parser.get_symbol_y(),
+            try:
+                self.__bind(parser.get_symbol_y(),
                     sy.solve(sy.Eq(self.__blocks[0], self.__blocks[1]), parser.get_symbol_y()))
+            except:
+                self.__error = "Unsolvable."
         elif len(self.__blocks) == 2 and parser.get_symbol_x() in xy:
             try:
                 self.__value = list(sy.solveset(sy.Eq(self.__blocks[0], self.__blocks[1]),
@@ -236,7 +239,7 @@ class Parsed:
         if isinstance(bbody, list):
             if len(bbody) == 0:
                 self.__error = "No solutions for " + str(bvar) + "."
-            if len(bbody) == 1:
+            elif len(bbody) == 1:
                 bbody = bbody[0]
         self.__binds = Binding()
         self.__binds.name = bvar
