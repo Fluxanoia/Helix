@@ -99,9 +99,13 @@ class Equation(tk.Frame):
     def __construct_colour(self):
         theme = Theme.getInstance()
 
+        def __close_colour_window():
+            self.__colour_window_open = False
+            self.__colour_window.place_forget()
+            self.__update()
+
         def close_func(_e):
-            if self.__colour_window_open:
-                self.__close_colour_window()
+            if self.__colour_window_open: __close_colour_window()
 
         def enter(_e):
             self.__colour_window.unbind_all("<ButtonPress-1>")
@@ -151,9 +155,7 @@ class Equation(tk.Frame):
         self.__blue.set(random.randint(0, 255))
 
         def button_func():
-            if self.__colour_window_open:
-                self.__close_colour_window()
-            else:
+            if not self.__colour_window_open:
                 self.__colour_window.place(relx = 0.2)
                 self.__colour_window.focus_set()
                 self.__colour_window_open = True
@@ -195,16 +197,14 @@ class Equation(tk.Frame):
                 self.__button_size,
                 self.__button_size))
 
-    def __close_colour_window(self):
-        self.__colour_window_open = False
-        self.__colour_window.place_forget()
-        self.__update()
-
     def __place_buttons(self):
         buttons = []
         if self.__plottable:
             buttons.append(self.__colour_button)
             buttons.append(self.__hide_button)
+        elif self.__colour_window_open:
+            self.__colour_window_open = False
+            self.__colour_window.place_forget()
         buttons.extend([self.__lock_button, self.__remove_button])
         for i in range(len(buttons)):
             buttons[i].place(y = (self.__button_size + self.__spacing) * i,
@@ -223,9 +223,7 @@ class Equation(tk.Frame):
         self.__parsed.eq = self
         self.__parsed.colour = (self.__red.get() / 255.0, self.__green.get() / 255.0,
             self.__blue.get() / 255.0)
-        self.__plottable = False
         self.__update_fun()
-        self.__place_buttons()
 
     def set_width(self, w):
         self.__inner.configure(width = w)
@@ -242,8 +240,7 @@ class Equation(tk.Frame):
 
     def set_plottable(self, b):
         self.__plottable = b
-        if not b:
-            self.__close_colour_window()
+        self.__place_buttons()
 
     def is_plottable(self):
         return self.__plottable

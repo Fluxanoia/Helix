@@ -159,7 +159,8 @@ class EquationEditor(ScrollableFrame):
                 p.eq.label("Unbound: " + str(fv))
 
         plottable = list(filter(lambda p : len(p.get_free_symbols()) == 0, plottable))
-        for p in plottable:
-            p.eq.set_plottable(True)
+        plot_entries = list(map(lambda p : p.eq, plottable))
+        for e in self.__entries:
+            e.set_plottable(e in plot_entries)
         plottable = list(filter(lambda p : not p.eq.is_hidden(), plottable))
         self.__plotter(plottable)
