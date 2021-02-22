@@ -73,11 +73,11 @@ class EquationViewer(tk.Frame):
     def __process_plots(self):
         if self.__mode == Dimension.TWO_D:
             self.__plots = list(filter(lambda p : p.has_dim() and \
-                p.get_dim() == self.__mode.value, \
+                p.get_dim() is self.__mode, \
                 self.__raw_plots))
         elif self.__mode == Dimension.THREE_D:
             self.__plots = list(filter(lambda p : p.has_dim() and \
-                p.get_dim() == self.__mode.value, \
+                p.get_dim() is self.__mode, \
                 self.__raw_plots))
         else:
             raise ValueError("Unhandled Dimension.")

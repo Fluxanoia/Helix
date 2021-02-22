@@ -8,6 +8,8 @@ from sympy.parsing.sympy_parser import standard_transformations, \
     function_exponentiation, \
     convert_xor
 
+from utils.plotting import Dimension, PlotType
+
 class Parser:
 
     __instance = None
@@ -57,10 +59,6 @@ class Parser:
 class ParseMode(enum.Enum):
     NORMAL      = 0
     COMPARATIVE = 1
-
-class Dimension(enum.Enum):
-    TWO_D   = 2
-    THREE_D = 3
 
 class Binding:
 
@@ -123,6 +121,8 @@ class Parsed:
     __value = None
     __error = None
 
+    __plot_type = None
+
     def __init__(self, expr):
         self.__raw = expr
         self.eval()
@@ -136,6 +136,7 @@ class Parsed:
         self.__binds = None
         self.__value = None
         self.__error = None
+        self.__plot_type = None
         # Partition the raw expression
         parsed_norm = ""
         parsed_comp = ""
@@ -184,14 +185,14 @@ class Parsed:
             if len(xy) == 0:
                 try:
                     self.__value = self.__blocks[0].evalf()
-                    self.__dim = 2
+                    self.__dim = Dimension.TWO_D
                 except Exception as e:
                     self.__error = type(e).__name__
                     return
             elif len(xy) == 1:
-                if xy[0] == parser.get_symbol_x(): self.__dim = 2
+                if xy[0] == parser.get_symbol_x(): self.__dim = Dimension.TWO_D
             elif len(xy) == 2:
-                self.__dim = 3
+                self.__dim = Dimension.THREE_D
         elif len(self.__blocks) == 2 and isinstance(self.__blocks[0], sy.Function):
             args = self.__blocks[0].args
             if not len(args) == len(set(args)):
@@ -234,6 +235,11 @@ class Parsed:
             pass
         else:
             self.__error = "Too many chained expressions."
+
+        if self.__dim is Dimension.TWO_D:
+            self.__plot_type = PlotType.LINE_2D
+        elif self.__dim is Dimension.THREE_D:
+            self.__plot_type = PlotType.SURFACE
 
     def __bind(self, bvar, bbody):
         if isinstance(bbody, list):
@@ -284,6 +290,9 @@ class Parsed:
     def transfer_data(self, p):
         p.eq = self.eq
         p.colour = self.colour
+
+    def get_plot_type(self):
+        return self.__plot_type
 
     def get_comparative(self):
         return self.__comparative
