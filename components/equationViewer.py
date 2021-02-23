@@ -1,9 +1,8 @@
 import tkinter as tk
-from utils.parsing import Dimension
 
 from utils.theme import Theme
 from utils.fonts import FontManager
-from utils.plotting import HelixPlot
+from utils.plotting import HelixPlot, Dimension, PlotType
 
 class EquationViewer(tk.Frame):
 
@@ -28,7 +27,7 @@ class EquationViewer(tk.Frame):
 
     def __init__(self, parent, width):
         super().__init__(parent)
-        Theme.getInstance().configureViewer(self)
+        Theme.get_instance().configureViewer(self)
 
         self.__width = width
 
@@ -38,10 +37,9 @@ class EquationViewer(tk.Frame):
         self.place(relx = width, relwidth = 1 - width, relheight = 1)
 
         self.__draw()
-
     def __constructViewFrame(self, parent):
         self.__frame = tk.Frame(parent)
-        Theme.getInstance().configureViewer(self.__frame)
+        Theme.get_instance().configureViewer(self.__frame)
         self.__frame.place(relx = self.__width,
             rely = 0,
             relwidth = 1 - self.__width,
@@ -51,61 +49,47 @@ class EquationViewer(tk.Frame):
             lambda e, w, h : self.drag(e, w, h),
             lambda e : self.zoom(e))
         self.__plot.widget().pack(fill = tk.BOTH, expand = True)
-
     def __constructDimensionButtons(self):
         self.__2d_button = tk.Button(self.__frame, text = "2D",
             command = lambda : self.__modeSwitcher(Dimension.TWO_D))
         self.__3d_button = tk.Button(self.__frame, text = "3D",
             command = lambda : self.__modeSwitcher(Dimension.THREE_D))
-        Theme.getInstance().configureViewerButton(self.__2d_button)
-        Theme.getInstance().configureViewerButton(self.__3d_button)
-        FontManager.getInstance().configureText(self.__2d_button)
-        FontManager.getInstance().configureText(self.__3d_button)
+        Theme.get_instance().configureViewerButton(self.__2d_button)
+        Theme.get_instance().configureViewerButton(self.__3d_button)
+        FontManager.get_instance().configureText(self.__2d_button)
+        FontManager.get_instance().configureText(self.__3d_button)
         size = 40
         self.__2d_button.place(x = 10, y = 10, w = size, h = size)
         self.__3d_button.place(x = 10, y = size + 20, w = size, h = size)
-
+    
     def __modeSwitcher(self, mode):
         self.__mode = mode
         self.__process_plots()
         self.__draw()
-
     def __process_plots(self):
-        if self.__mode == Dimension.TWO_D:
-            self.__plots = list(filter(lambda p : p.has_dim() and \
-                p.get_dim() is self.__mode, \
-                self.__raw_plots))
-        elif self.__mode == Dimension.THREE_D:
-            self.__plots = list(filter(lambda p : p.has_dim() and \
-                p.get_dim() is self.__mode, \
-                self.__raw_plots))
-        else:
-            raise ValueError("Unhandled Dimension.")
-
+        self.__plots = list(filter(lambda p : isinstance(p.get_plot_type(), PlotType) and \
+            p.get_plot_type().value is self.__mode, self.__raw_plots))
     def plot(self, plots):
         self.__raw_plots = plots
         self.__process_plots()
         self.__draw()
-
+    
     def __draw_plot2d(self):
         self.__plot.set_dim(Dimension.TWO_D)
         self.__plot.remove_plots()
         self.__plot.add_plots_2d(self.__plots)
         self.__plot.redraw()
-
     def __draw_plot3d(self):
         self.__plot.set_dim(Dimension.THREE_D)
         self.__plot.remove_plots()
         self.__plot.add_plots_3d(self.__plots)
         self.__plot.redraw()
-
     def __draw(self):
         if self.__mode == Dimension.TWO_D: self.__draw_plot2d()
         if self.__mode == Dimension.THREE_D: self.__draw_plot3d()
 
     def drag_start(self, e):
         self.__drag_pos = (e.x, e.y)
-
     def drag(self, e, w, h):
         if self.__mode == Dimension.TWO_D:
             self.__view_rect[0] += (self.__drag_pos[0] - e.x) \
@@ -119,7 +103,6 @@ class EquationViewer(tk.Frame):
             self.__elev += (e.y - self.__drag_pos[1]) / (self.__drag_scale_3d / h)
             self.__drag_pos = (e.x, e.y)
             return (self.__elev, self.__azim)
-
     def zoom(self, e):
         if self.__mode == Dimension.TWO_D:
             lw = max(self.__view_rect[2:4])

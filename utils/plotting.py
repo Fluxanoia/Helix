@@ -22,13 +22,14 @@ class Dimension(enum.Enum):
     THREE_D = 3
 
 class PlotType(enum.Enum):
-    LINE_2D = 0
-    PARAMETRIC_2D = 1
-    IMPLICIT_2D = 2
-    SURFACE = 3
-    PARAMETRIC_3D = 4
-    PARAMETRIC_SURFACE = 5
-    CONTOUR = 6
+    LINE_2D = Dimension.TWO_D
+    PARAMETRIC_2D = Dimension.TWO_D
+    IMPLICIT_2D = Dimension.TWO_D
+
+    SURFACE = Dimension.THREE_D
+    PARAMETRIC_3D = Dimension.THREE_D
+    PARAMETRIC_SURFACE = Dimension.THREE_D
+    CONTOUR = Dimension.THREE_D
 
 class HelixPlot(FigureCanvasTkAgg):
 
@@ -58,13 +59,13 @@ class HelixPlot(FigureCanvasTkAgg):
 
     def __init__(self, parent, press_func, drag_func, zoom_func):
         super().__init__(self.__figure, master = parent)
-        Theme.getInstance().configureFigure(self.__figure)
+        Theme.get_instance().configureFigure(self.__figure)
 
         self.__axis2 = mpl.axes.Axes(self.__figure, (0, 0, 1, 1))
-        Theme.getInstance().configurePlot2D(self.__axis2)
+        Theme.get_instance().configurePlot2D(self.__axis2)
 
         self.__axis3 = Axes3D(self.__figure, (0, 0, 1, 1))
-        Theme.getInstance().configurePlot3D(self.__axis3)
+        Theme.get_instance().configurePlot3D(self.__axis3)
 
         self.__axis2.set_xlim(self.__xlim)
         self.__axis2.set_ylim(self.__ylim)
@@ -156,19 +157,19 @@ class HelixPlot(FigureCanvasTkAgg):
         self.__data = []
         if self.__dim is not None: self.__axis.clear()
 
-    def add_plots_2d(self, parsed):
+    def add_plots_2d(self, plots):
         if self.__dim is not Dimension.TWO_D:
             raise ValueError("Incorrect plot dimension.")
 
-        for p in parsed:
-            expr = p.get_blocks()[0]
+        for p in plots:
+            expr = p.get_body()
             if p.get_plot_type() is PlotType.LINE_2D:
                 check = check_arguments([expr], 1, 1)[0]
-                self.__data.append(LineOver1DRangeSeries(*check, line_color = p.colour))
+                self.__data.append(LineOver1DRangeSeries(*check, line_color = p.get_colour()))
             elif p.get_plot_type() is PlotType.PARAMETRIC_2D:
-                param = (p.get_blocks()[0], p.get_blocks()[1])
+                param = (expr, expr) # TODO parametric, (p.get_blocks()[0], p.get_blocks()[1])
                 check = check_arguments(param, 2, 1)[0]
-                self.__data.append(Parametric2DLineSeries(*check, line_color = p.colour))
+                self.__data.append(Parametric2DLineSeries(*check, line_color = p.get_colour()))
             elif p.get_plot_type() is PlotType.IMPLICIT_2D:
                 arg_list = []
                 if isinstance(expr, BooleanFunction):
@@ -190,11 +191,11 @@ class HelixPlot(FigureCanvasTkAgg):
                     has_equality = True
 
                 from utils.parsing import Parser
-                parser = Parser.getInstance()
+                parser = Parser.get_instance()
                 x = (parser.get_symbol_x(), *self.__xlim)
                 y = (parser.get_symbol_y(), *self.__ylim)
                 self.__data.append(ImplicitSeries(expr, x, y, has_equality,
-                    True, 0, 300, p.colour))
+                    True, 0, 300, p.get_colour()))
             else:
                 raise ValueError("Incorrect parsed dimension.")
 
@@ -203,22 +204,22 @@ class HelixPlot(FigureCanvasTkAgg):
             raise ValueError("Incorrect plot dimension.")
 
         for p in parsed:
-            expr = p.get_blocks()[0]
+            expr = p.get_body()
             if p.get_plot_type() is PlotType.SURFACE:
                 check = check_arguments([expr], 1, 2)[0]
-                self.__data.append(SurfaceOver2DRangeSeries(*check, surface_color = p.colour))
+                self.__data.append(SurfaceOver2DRangeSeries(*check, surface_color = p.get_colour()))
             elif p.get_plot_type() is PlotType.PARAMETRIC_3D:
-                param = (p.get_blocks()[0], p.get_blocks()[1], p.get_blocks()[2])
+                param = (expr, expr, expr) # TODO parametric, (p.get_blocks()[0], p.get_blocks()[1], p.get_blocks()[2])
                 check = check_arguments(param, 3, 1)[0]
-                self.__data.append(Parametric3DLineSeries(*check, line_color = p.colour))
+                self.__data.append(Parametric3DLineSeries(*check, line_color = p.get_colour()))
             elif p.get_plot_type() is PlotType.PARAMETRIC_SURFACE:
-                param = (p.get_blocks()[0], p.get_blocks()[1], p.get_blocks()[2])
+                param = (expr, expr, expr) # TODO parametric, (p.get_blocks()[0], p.get_blocks()[1], p.get_blocks()[2])
                 check = check_arguments(param, 3, 2)[0]
-                self.__data.append(ParametricSurfaceSeries(*check, surface_color = p.colour))
+                self.__data.append(ParametricSurfaceSeries(*check, surface_color = p.get_colour()))
             elif p.get_plot_type() is PlotType.CONTOUR:
                 check = check_arguments([expr], 1, 2)[0]
                 self.__data.append(ContourSeries(*check))
-                self.__data[-1].line_color = p.colour
+                self.__data[-1].line_color = p.get_colour()
             else:
                 raise ValueError("Incorrect parsed dimension.")
 

@@ -11,7 +11,7 @@ class EquationDivider(tk.Frame):
 
     def __init__(self, parent):
         super().__init__(parent, height = 4)
-        Theme.getInstance().configureEditorDivider(self)
+        Theme.get_instance().configureEditorDivider(self)
         self.pack(fill = tk.BOTH, expand = True)
 
 class EquationEditor(ScrollableFrame):
@@ -30,9 +30,9 @@ class EquationEditor(ScrollableFrame):
 
     def __init__(self, parent, width, plotter):
         super().__init__(parent, self.__entry_config)
-        Theme.getInstance().configureEditor(self)
-        Theme.getInstance().configureEditor(self.getCanvas())
-        Theme.getInstance().configureEditor(self.getInnerFrame())
+        Theme.get_instance().configureEditor(self)
+        Theme.get_instance().configureEditor(self.getCanvas())
+        Theme.get_instance().configureEditor(self.getInnerFrame())
 
         self.__plotter = plotter
 
@@ -42,19 +42,19 @@ class EquationEditor(ScrollableFrame):
         self.__entry_button = tk.Button(parent,
             text = "+",
             command = self.__add_entry)
-        Theme.getInstance().configureEditorButton(self.__entry_button)
-        FontManager.getInstance().configureText(self.__entry_button)
+        Theme.get_instance().configureEditorButton(self.__entry_button)
+        FontManager.get_instance().configureText(self.__entry_button)
         self.__entry_button.place(
             rely = 1 - self.__add_button_height,
             relwidth = width,
             relheight = self.__add_button_height)
 
-        self.__add_entry("f(x) = x^2 + 1")
-        self.__add_entry("a = 3")
-        self.__add_entry("f(x)")
-        self.__add_entry("f(x / a)")
-        self.__add_entry("g(x, y) = sin(x) + cos(y)")
-        self.__add_entry("g(x, y)")
+        #self.__add_entry("f(x) = x^2 + 1")
+        #self.__add_entry("a = 3")
+        #self.__add_entry("f(x)")
+        #self.__add_entry("f(x / a)")
+        #self.__add_entry("g(x, y) = sin(x) + cos(y)")
+        #self.__add_entry("g(x, y)")
 
     def __add_entry(self, text = None):
         eq = Equation(self.getInnerFrame(), self.__update, self.__remove_entry)
@@ -78,11 +78,11 @@ class EquationEditor(ScrollableFrame):
             e.set_width(self.__entry_width)
 
     def __update(self):
-        parser = Parser.getInstance()
-
         bound = []
+        plots = []
         bindings = []
-        plottable = []
+        parser = Parser.get_instance()
+        unbound = [None, parser.get_symbol_y(), parser.get_symbol_z()]
 
         def rm_dupes_gen(var):
             def rm_dupes(b, v = var):
@@ -93,31 +93,27 @@ class EquationEditor(ScrollableFrame):
 
         for e in self.__entries:
             p = e.get_parsed()
-            if p is not None: p.eval()
             if p is None:
-                e.label("")
-            elif p.has_error():
+                e.label("Empty.")
+                continue
+            p.reset()
+            if p.has_error():
                 e.label(p.get_error())
             elif p.has_binding():
                 bind = p.get_binding()
-                bind.eq = e
-                e.label(str(bind.name) + " = " + str(bind.body))
-                if bind.name == parser.get_symbol_y():
-                    body = bind.body
-                    if not isinstance(body, list): body = [body]
-                    for b in body:
-                        parsed = Parsed(str(b))
-                        p.transfer_data(parsed)
-                        plottable.append(parsed)
+                if bind.get_name() is None and bind.get_plot_type() is None:
+                    e.label(str(bind.get_body()))
                 else:
-                    bindings.append(bind)
-                    if bind.name in bound:
-                        bound.remove(bind.name)
-                        bindings = list(filter(rm_dupes_gen(bind.name), bindings))
+                    e.label(str(bind))
+                    if bind.get_name() in unbound:
+                        plots.append(bind)
                     else:
-                        bound.append(bind.name)
-            elif p.has_dim():
-                plottable.append(p)
+                        bindings.append(bind)
+                        if bind.get_name() in bound:
+                            bound.remove(bind.get_name())
+                            bindings = list(filter(rm_dupes_gen(bind.get_name()), bindings))
+                        else:
+                            bound.append(bind.get_name())
             else:
                 raise ValueError("Unhandled Parsed state.")
 
@@ -125,24 +121,17 @@ class EquationEditor(ScrollableFrame):
             done = []
             for b in bindings:
                 if len(b.get_free_symbols()) == 0:
-                    if len(b.get_xy_symbols()) == 0:
-                        if b.is_func():
-                            b.label(str(b.name) + " = " + str(b.body))
-                        elif b.is_var():
-                            b.label(b.body)
-                        else:
-                            raise ValueError("Unexpected binding type.")
                     done.append(b)
             if len(done) == 0: break
             for d in done:
                 bindings.remove(d)
                 rm = []
-                for x in bindings + plottable:
+                for x in bindings + plots:
                     err = None
-                    if d.is_func():
-                        err = x.replace(d.name, d.body)
-                    elif d.is_var():
-                        err = x.subs([(d.name, d.body)])
+                    if d.binds_func():
+                        err = x.replace(d.get_name(), d.get_body())
+                    elif d.binds_var():
+                        err = x.subs([(d.get_name(), d.get_body())])
                     else:
                         raise ValueError("Unexpected binding type.")
                     if err is not None:
@@ -150,20 +139,20 @@ class EquationEditor(ScrollableFrame):
                         rm.append(x)
                 for r in rm:
                     if r in bindings: bindings.remove(r)
-                    if r in plottable: plottable.remove(r)
+                    if r in plots: plots.remove(r)
 
         for (_, _, e) in bindings:
             e.label("Unresolvable.")
-        for p in plottable:
+        for p in plots:
             fv = p.get_free_symbols()
             if len(fv) == 0:
-                p.eq.label(str(p))
+                p.label(str(p))
             else:
-                p.eq.label("Unbound: " + str(fv))
+                p.label("Unbound: " + str(fv))
 
-        plottable = list(filter(lambda p : len(p.get_free_symbols()) == 0, plottable))
-        plot_entries = list(map(lambda p : p.eq, plottable))
+        plots = list(filter(lambda p : len(p.get_free_symbols()) == 0, plots))
+        plot_entries = list(map(lambda p : p.get_equation(), plots))
         for e in self.__entries:
             e.set_plottable(e in plot_entries)
-        plottable = list(filter(lambda p : not p.eq.is_hidden(), plottable))
-        self.__plotter(plottable)
+        plots = list(filter(lambda p : not p.get_equation().is_hidden(), plots))
+        self.__plotter(plots)

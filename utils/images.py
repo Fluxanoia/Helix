@@ -9,7 +9,7 @@ class ImageManager:
     __images = {}
 
     @staticmethod
-    def getInstance():
+    def get_instance():
         if ImageManager.__instance is None:
             raise Exception("No instance of ImageManager.")
         return ImageManager.__instance

@@ -19,7 +19,7 @@ class DelayTracker:
             d[0].after_cancel(d[1])
 
     @staticmethod
-    def getInstance():
+    def get_instance():
         if DelayTracker.__instance is None:
             raise Exception("No instance of DelayTracker.")
         return DelayTracker.__instance

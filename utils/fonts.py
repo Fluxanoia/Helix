@@ -12,7 +12,7 @@ class FontManager:
         w.configure(font = self.getTextFont())
 
     @staticmethod
-    def getInstance():
+    def get_instance():
         if FontManager.__instance is None:
             raise Exception("No instance of FontManager.")
         return FontManager.__instance

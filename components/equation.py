@@ -61,7 +61,7 @@ class Equation(tk.Frame):
         self.__update_fun = update_fun
         self.__remove_func = remove_func
 
-        self.__inner = tk.Frame(self, bg = Theme.getInstance().getEditorBody(),
+        self.__inner = tk.Frame(self, bg = Theme.get_instance().getEditorBody(),
             padx = self.__frame_pad, pady = self.__frame_pad,
             height = self.__frame_pad * 2 + 170)
         self.__inner.pack(anchor = tk.CENTER, fill = tk.BOTH, expand = True)
@@ -69,15 +69,15 @@ class Equation(tk.Frame):
         self.__entry_var = tk.StringVar()
         self.__entry_var.trace('w', self.__debounce_update)
         self.__entry = tk.Entry(self.__inner, textvariable = self.__entry_var)
-        FontManager.getInstance().configureText(self.__entry)
+        FontManager.get_instance().configureText(self.__entry)
         self.__entry.place(x = self.__button_size + self.__spacing,
             w = -(self.__button_size + self.__spacing),
             relwidth = 1)
 
         self.__readout_wrapper = tk.Frame(self.__inner)
         self.__readout = tk.Text(self.__readout_wrapper)
-        FontManager.getInstance().configureText(self.__readout)
-        Theme.getInstance().configureEditorReadout(self.__readout)
+        FontManager.get_instance().configureText(self.__readout)
+        Theme.get_instance().configureEditorReadout(self.__readout)
         self.__readout.config(state = tk.DISABLED)
         self.__readout.pack(fill = tk.BOTH, expand = True)
         self.__readout_wrapper.place(x = self.__button_size + self.__spacing,
@@ -97,7 +97,7 @@ class Equation(tk.Frame):
         self.pack(fill = tk.BOTH, expand = True)
 
     def __construct_colour(self):
-        theme = Theme.getInstance()
+        theme = Theme.get_instance()
 
         def __close_colour_window():
             self.__colour_window_open = False
@@ -123,7 +123,7 @@ class Equation(tk.Frame):
         leave(None)
 
         def update(_v):
-            self.__colour_button.configure(image = ImageManager.getInstance().getColour(
+            self.__colour_button.configure(image = ImageManager.get_instance().getColour(
                 self.__red.get(), self.__green.get(), self.__blue.get(),
                 self.__button_size,
                 self.__button_size))
@@ -161,11 +161,10 @@ class Equation(tk.Frame):
                 self.__colour_window_open = True
 
         self.__colour_button = self.__create_button(button_func, "colour.png")
-        self.__colour_button.configure(image = ImageManager.getInstance().getColour(
+        self.__colour_button.configure(image = ImageManager.get_instance().getColour(
                 self.__red.get(), self.__green.get(), self.__blue.get(),
                 self.__button_size,
                 self.__button_size))
-
     def __construct_lock(self):
         def lock():
             self.__entry.config(state = tk.NORMAL if self.__locked else tk.DISABLED)
@@ -173,7 +172,6 @@ class Equation(tk.Frame):
             self.__lock_button.config(relief = tk.SUNKEN if self.__locked else tk.RAISED)
 
         self.__lock_button = self.__create_button(lock, "lock.png")
-
     def __construct_hide(self):
         def hide():
             self.__hidden = not self.__hidden
@@ -181,18 +179,16 @@ class Equation(tk.Frame):
             self.__hide_button.config(relief = tk.SUNKEN if self.__hidden else tk.RAISED)
 
         self.__hide_button = self.__create_button(hide, "hide.png")
-
     def __construct_remove(self):
         def remove(self):
             self.pack_forget()
             self.__remove_func(self)
 
         self.__remove_button = self.__create_button(lambda s = self : remove(s), "remove.png")
-
     def __create_button(self, command, img_path):
         return tk.Button(self.__inner,
             command = command,
-            image = ImageManager.getInstance().getImage(
+            image = ImageManager.get_instance().getImage(
                 img_path,
                 self.__button_size,
                 self.__button_size))
@@ -209,29 +205,25 @@ class Equation(tk.Frame):
         for i in range(len(buttons)):
             buttons[i].place(y = (self.__button_size + self.__spacing) * i,
                 w = self.__button_size, h = self.__button_size)
-
     def __debounce_update(self, *_args):
         if self.__debounce_id is not None:
-            DelayTracker.getInstance().endDelay(self, self.__debounce_id)
+            DelayTracker.get_instance().endDelay(self, self.__debounce_id)
         self.__debounce_id = self.after(self.__debounce_delay, self.__update)
-        DelayTracker.getInstance().addDelay(self, self.__debounce_id)
-
+        DelayTracker.get_instance().addDelay(self, self.__debounce_id)
     def __update(self, *_args):
-        DelayTracker.getInstance().removeDelay(self, self.__debounce_id)
+        DelayTracker.get_instance().removeDelay(self, self.__debounce_id)
         self.__debounce_id = None
         self.__parsed = Parsed(self.get_text())
-        self.__parsed.eq = self
-        self.__parsed.colour = (self.__red.get() / 255.0, self.__green.get() / 255.0,
-            self.__blue.get() / 255.0)
+        self.__parsed.set_equation(self)
+        self.__parsed.set_colour((self.__red.get() / 255.0,
+            self.__green.get() / 255.0, self.__blue.get() / 255.0))
         self.__update_fun()
-
     def set_width(self, w):
         self.__inner.configure(width = w)
 
     def force_text(self, text):
         self.__entry.delete(0, tk.END)
         self.__entry.insert(0, text)
-
     def label(self, text):
         self.__readout.config(state = tk.NORMAL)
         self.__readout.delete(1.0, tk.END)
@@ -241,15 +233,11 @@ class Equation(tk.Frame):
     def set_plottable(self, b):
         self.__plottable = b
         self.__place_buttons()
-
     def is_plottable(self):
         return self.__plottable
-
     def is_hidden(self):
         return self.__hidden
-
     def get_text(self):
         return self.__entry.get()
-
     def get_parsed(self):
         return self.__parsed

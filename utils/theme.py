@@ -143,7 +143,7 @@ class Theme:
             highlightthickness = 0)
 
     @staticmethod
-    def getInstance():
+    def get_instance():
         if Theme.__instance is None:
             raise Exception("No instance of Theme.")
         return Theme.__instance
