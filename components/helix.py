@@ -12,32 +12,27 @@ from components.equationViewer import EquationViewer
 
 class Helix:
 
-    # Root
-    __root = Tk()
-
-    # Managers
-    __fonts = FontManager(__root)
-    __images = ImageManager()
-    __theme = Theme()
-    __parser = Parser()
-    __delayTracker = DelayTracker()
-
-    # Dimensions
-    __width = 1280
-    __height = 720
-
-    # Menu Bar Widgets
-    __menu = Menu(__root)
-    __file_menu = Menu(__menu, tearoff = 0)
-    __edit_menu = Menu(__menu, tearoff = 0)
-    __help_menu = Menu(__menu, tearoff = 0)
-
-    # Main Frames
-    __frame_editor = None
-    __frame_viewer = None
-    __frame_split = 0.2
-
     def __init__(self):
+        self.__root = Tk()
+
+        self.__fonts = FontManager(self.__root)
+        self.__images = ImageManager()
+        self.__theme = Theme()
+        self.__parser = Parser()
+        self.__delayTracker = DelayTracker()
+
+        self.__width = 1280
+        self.__height = 720
+
+        self.__menu = Menu(self.__root)
+        self.__file_menu = Menu(self.__menu, tearoff = 0)
+        self.__edit_menu = Menu(self.__menu, tearoff = 0)
+        self.__help_menu = Menu(self.__menu, tearoff = 0)
+
+        self.__frame_editor = None
+        self.__frame_viewer = None
+        self.__frame_split = 0.2
+
         self.__constructWindow()
         self.__constructMenu()
         self.__constructPanels()

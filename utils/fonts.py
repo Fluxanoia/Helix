@@ -4,13 +4,6 @@ class FontManager:
 
     __instance = None
 
-    __textFont = None
-
-    def getTextFont(self):
-        return self.__textFont
-    def configureText(self, w):
-        w.configure(font = self.getTextFont())
-
     @staticmethod
     def get_instance():
         if FontManager.__instance is None:
@@ -23,3 +16,8 @@ class FontManager:
         else:
             FontManager.__instance = self
             self.__textFont = font.Font(root, size = 16)
+
+    def get_text_font(self):
+        return self.__textFont
+    def configure_text(self, w):
+        w.configure(font = self.get_text_font())

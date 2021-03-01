@@ -2,16 +2,11 @@ import tkinter as tk
 
 class ScrollableFrame(tk.Frame):
 
-    __config = None
-
-    __canvas = None
-    __scroll = None
-    __frame = None
-
-    __active_scroll = False
-
     def __init__(self, parent, config, **args):
         super().__init__(parent, args)
+
+        self.__active_scroll = False
+
         self.__config = config
         self.__canvas = tk.Canvas(self, args)
         self.__frame = tk.Frame(self.__canvas, args)

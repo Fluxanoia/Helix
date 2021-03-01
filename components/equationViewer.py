@@ -2,34 +2,29 @@ import tkinter as tk
 
 from utils.theme import Theme
 from utils.fonts import FontManager
-from utils.plotting import HelixPlot, Dimension, PlotType
+from utils.maths import Dimension, PlotType
+from components.plot import HelixPlot
 
 class EquationViewer(tk.Frame):
 
-    __mode = Dimension.TWO_D
-
-    __raw_plots = []
-    __plots = []
-
-    __view_rect = [-10, -10, 20, 20]
-    __elev = 30
-    __azim = -60
-    __view_cuboid = [-10, -10, -10, 20, 20, 20]
-
-    __drag_pos = None
-    __drag_scale_3d = 800
-
-    __width = None
-    __frame = None
-    __2d_button = None
-    __3d_button = None
-    __plot = None
-
     def __init__(self, parent, width):
         super().__init__(parent)
-        Theme.get_instance().configureViewer(self)
+        Theme.get_instance().configure_viewer(self)
 
         self.__width = width
+
+        self.__mode = Dimension.TWO_D
+
+        self.__raw_plots = []
+        self.__plots = []
+
+        self.__view_rect = [-10, -10, 20, 20]
+        self.__elev = 30
+        self.__azim = -60
+        self.__view_cuboid = [-10, -10, -10, 20, 20, 20]
+
+        self.__drag_pos = None
+        self.__drag_scale_3d = 800
 
         self.__constructViewFrame(parent)
         self.__constructDimensionButtons()
@@ -39,7 +34,7 @@ class EquationViewer(tk.Frame):
         self.__draw()
     def __constructViewFrame(self, parent):
         self.__frame = tk.Frame(parent)
-        Theme.get_instance().configureViewer(self.__frame)
+        Theme.get_instance().configure_viewer(self.__frame)
         self.__frame.place(relx = self.__width,
             rely = 0,
             relwidth = 1 - self.__width,
@@ -48,22 +43,24 @@ class EquationViewer(tk.Frame):
             lambda e : self.drag_start(e),
             lambda e, w, h : self.drag(e, w, h),
             lambda e : self.zoom(e))
+        self.__plot.set_dim(self.__mode)
         self.__plot.widget().pack(fill = tk.BOTH, expand = True)
     def __constructDimensionButtons(self):
         self.__2d_button = tk.Button(self.__frame, text = "2D",
             command = lambda : self.__modeSwitcher(Dimension.TWO_D))
         self.__3d_button = tk.Button(self.__frame, text = "3D",
             command = lambda : self.__modeSwitcher(Dimension.THREE_D))
-        Theme.get_instance().configureViewerButton(self.__2d_button)
-        Theme.get_instance().configureViewerButton(self.__3d_button)
-        FontManager.get_instance().configureText(self.__2d_button)
-        FontManager.get_instance().configureText(self.__3d_button)
+        Theme.get_instance().configure_viewer_button(self.__2d_button)
+        Theme.get_instance().configure_viewer_button(self.__3d_button)
+        FontManager.get_instance().configure_text(self.__2d_button)
+        FontManager.get_instance().configure_text(self.__3d_button)
         size = 40
         self.__2d_button.place(x = 10, y = 10, w = size, h = size)
         self.__3d_button.place(x = 10, y = size + 20, w = size, h = size)
 
     def __modeSwitcher(self, mode):
         self.__mode = mode
+        self.__plot.set_dim(mode)
         self.__process_plots()
         self.__draw()
     def __process_plots(self):
@@ -73,20 +70,9 @@ class EquationViewer(tk.Frame):
         self.__raw_plots = plots
         self.__process_plots()
         self.__draw()
-
-    def __draw_plot2d(self):
-        self.__plot.set_dim(Dimension.TWO_D)
-        self.__plot.remove_plots()
-        self.__plot.add_plots_2d(self.__plots)
-        self.__plot.redraw()
-    def __draw_plot3d(self):
-        self.__plot.set_dim(Dimension.THREE_D)
-        self.__plot.remove_plots()
-        self.__plot.add_plots_3d(self.__plots)
-        self.__plot.redraw()
     def __draw(self):
-        if self.__mode == Dimension.TWO_D: self.__draw_plot2d()
-        if self.__mode == Dimension.THREE_D: self.__draw_plot3d()
+        self.__plot.set_plots(self.__plots, self.__mode)
+        self.__plot.redraw()
 
     def drag_start(self, e):
         self.__drag_pos = (e.x, e.y)

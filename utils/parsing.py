@@ -10,19 +10,11 @@ from sympy.core.relational import Relational, GreaterThan, LessThan, StrictGreat
     StrictLessThan, Equality, Unequality
 from sympy.logic.boolalg import BooleanFunction
 
-from utils.plotting import PlotType
+from utils.maths import PlotType
 
 class Parser:
 
     __instance = None
-
-    __transformations = standard_transformations \
-        + (function_exponentiation, convert_xor, convert_equals_signs)
-
-    __x = None
-    __y = None
-    __z = None
-    __def_bindings = None
 
     @staticmethod
     def get_instance():
@@ -33,10 +25,12 @@ class Parser:
     def __init__(self):
         if Parser.__instance is not None:
             raise Exception("Invalid initialistion of Parser.")
+        Parser.__instance = self
         self.__x, self.__y, self.__z = sy.symbols('x y z')
         e, pi = sy.symbols('e pi')
         self.__def_bindings = [(e, np.exp(1)), (pi, np.pi)]
-        Parser.__instance = self
+        self.__transformations = standard_transformations \
+            + (function_exponentiation, convert_xor, convert_equals_signs)
 
     def args(self, raw_expr):
         def _args(expr):
@@ -51,8 +45,11 @@ class Parser:
         if not isinstance(exprs, list): exprs = [exprs]
         symbols = set()
         for expr in exprs:
-            symbols = symbols.union(set(expr.free_symbols))
-            symbols = symbols.union(set(expr.atoms(AppliedUndef)))
+            try:
+                symbols = symbols.union(set(expr.free_symbols))
+                symbols = symbols.union(set(expr.atoms(AppliedUndef)))
+            except:
+                continue
         return list(symbols)
     def get_xy_symbols(self, exprs):
         return list(filter(lambda s : s in self.get_default_symbols(),
@@ -77,17 +74,13 @@ class Parser:
 
 class Binding:
 
-    __name = None
-    __body = None
-    __dependencies = set()
-    __plot_type = None
-    __equation = None
-    __colour = None
-
     def __init__(self, name, body, plot_type):
         self.__name = name
         self.__body = body
         self.__plot_type = plot_type
+        self.__dependencies = set()
+        self.__equation = None
+        self.__colour = None
 
     def subs(self, substitutions):
         try:
@@ -146,23 +139,37 @@ class Binding:
         self.__colour = colour
 
     def __str__(self):
-        return str(self.__name) + " = " + str(self.__body)
+        if self.__name is None:
+            if isinstance(self.__body, Relational):
+                op_dict = {
+                    GreaterThan : ">=",
+                    LessThan : "<=",
+                    StrictGreaterThan : ">",
+                    StrictLessThan : "<",
+                    Equality : "=",
+                    Unequality : "/="
+                }
+                return str(self.__body.lhs) + " " + op_dict[type(self.__body)] \
+                    + " " + str(self.__body.rhs)
+            else:
+                return str(self.__body)
+        else:
+            return str(self.__name) + " = " + str(self.__body)
 
 class Parsed:
 
-    __raw = None
-    __raw_expr = None
-    __raw_args = None
-    __raw_relation = None
-    __is_parametric = False
-
-    __raw_binding = None
-    __raw_error = None
-
-    __binding = None
-    __error = None
-
     def __init__(self, raw):
+        self.__raw_expr = None
+        self.__raw_args = None
+        self.__raw_relation = None
+        self.__is_parametric = False
+
+        self.__raw_binding = None
+        self.__raw_error = None
+
+        self.__binding = None
+        self.__error = None
+
         self.__eval(raw)
         self.reset()
 

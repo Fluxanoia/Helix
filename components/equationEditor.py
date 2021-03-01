@@ -11,34 +11,27 @@ class EquationDivider(tk.Frame):
 
     def __init__(self, parent):
         super().__init__(parent, height = 4)
-        Theme.get_instance().configureEditorDivider(self)
+        Theme.get_instance().configure_editor_divider(self)
         self.pack(fill = tk.BOTH, expand = True)
 
 class EquationEditor(ScrollableFrame):
 
-    # Plotting
-    __plotter = None
-
-    # Entries
-    __entry_width = None
-    __entry_button = None
-    __entries = []
-    __dividers = []
-
-    # Placement
-    __add_button_height = 0.05
-
-    # Parsing
-    __plots = []
-    __bindings = []
-
     def __init__(self, parent, width, plotter):
         super().__init__(parent, self.__entry_config)
-        Theme.get_instance().configureEditor(self)
-        Theme.get_instance().configureEditor(self.getCanvas())
-        Theme.get_instance().configureEditor(self.getInnerFrame())
+        Theme.get_instance().configure_editor(self)
+        Theme.get_instance().configure_editor(self.getCanvas())
+        Theme.get_instance().configure_editor(self.getInnerFrame())
 
         self.__plotter = plotter
+
+        self.__entry_width = None
+        self.__entries = []
+        self.__dividers = []
+
+        self.__plots = []
+        self.__bindings = []
+
+        self.__add_button_height = 0.05
 
         self.place(relwidth = width,
             relheight = 1 - self.__add_button_height)
@@ -46,13 +39,14 @@ class EquationEditor(ScrollableFrame):
         self.__entry_button = tk.Button(parent,
             text = "+",
             command = self.__add_entry)
-        Theme.get_instance().configureEditorButton(self.__entry_button)
-        FontManager.get_instance().configureText(self.__entry_button)
+        Theme.get_instance().configure_editor_button(self.__entry_button)
+        FontManager.get_instance().configure_text(self.__entry_button)
         self.__entry_button.place(
             rely = 1 - self.__add_button_height,
             relwidth = width,
             relheight = self.__add_button_height)
 
+        # TODO default project stuff
         self.__add_entry("f(x) = x^2 + 1")
         self.__add_entry("a = 3")
         self.__add_entry("f(x)")
@@ -87,10 +81,13 @@ class EquationEditor(ScrollableFrame):
 
         prior = set([b for b in self.__bindings if b.get_equation() is changed_eq])
         prior_names = list(map(lambda b : b.get_name(), prior))
-        unaffected_check = lambda b : len(b.get_raw_free_symbols().intersection(prior_names)) == 0
+        def unaffected_check(b):
+            symbols = b.get_raw_free_symbols()
+            if not b.get_name() in unbound: symbols.add(b.get_name())
+            no_prior = len(symbols.intersection(prior_names)) == 0
+            return no_prior and not b.get_equation() is changed_eq
         self.__bindings = [b for b in self.__bindings if unaffected_check(b)]
-        self.__plots = [b for b in self.__plots if not b.get_equation() is changed_eq \
-            and unaffected_check(b)]
+        self.__plots = [b for b in self.__plots if unaffected_check(b)]
         unaffected = [b.get_equation() for b in self.__bindings + self.__plots]
 
         def rm_dupes(var):
@@ -156,7 +153,7 @@ class EquationEditor(ScrollableFrame):
         for b in [b for b in self.__bindings if not b in used]:
             b.label("Unresolvable.")
         self.__bindings = used
-        
+
         for p in self.__plots:
             fv = p.get_free_symbols()
             if len(fv) == 0:
