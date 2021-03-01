@@ -9,6 +9,7 @@ from sympy.parsing.sympy_parser import standard_transformations, \
 from sympy.core.relational import Relational, GreaterThan, LessThan, StrictGreaterThan, \
     StrictLessThan, Equality, Unequality
 from sympy.logic.boolalg import BooleanFunction
+from sympy.core.compatibility import exec_
 
 from utils.maths import PlotType
 
@@ -31,6 +32,19 @@ class Parser:
         self.__def_bindings = [(e, np.exp(1)), (pi, np.pi)]
         self.__transformations = standard_transformations \
             + (function_exponentiation, convert_xor, convert_equals_signs)
+        self.__global_dict = {}
+
+        exec_('from sympy.core import *', self.__global_dict)
+        exec_('from sympy.functions import *', self.__global_dict)
+        exclusions = ['sympify', 'SympifyError', 'cacheit',
+            'assumptions', 'check_assumptions', 'failing_assumptions',
+            'common_assumptions', 'vectorize','Subs', 'expand',
+            'PoleError', 'count_ops', 'expand_mul', 'expand_log',
+            'expand_func', 'expand_trig', 'expand_complex',
+            'expand_multinomial', 'nfloat', 'expand_power_base',
+            'expand_power_exp', 'arity', 'PrecisionExhausted', 'N',
+            'evalf', 'Dict', 'gcd_terms', 'factor_terms', 'factor_nc', 'evaluate']
+        for e in exclusions: self.__global_dict.pop(e)
 
     def args(self, raw_expr):
         def _args(expr):
@@ -59,7 +73,8 @@ class Parser:
             self.get_symbols(exprs)))
 
     def parse(self, expr):
-        return parse_expr(expr, transformations = self.__transformations)
+        return parse_expr(expr, global_dict = self.__global_dict,
+            transformations = self.__transformations)
 
     def get_symbol_x(self):
         return self.__x
@@ -89,7 +104,7 @@ class Binding:
                     self.__body = self.__body.subs(old, new)
                     self.__dependencies.add(old)
         except Exception as e:
-            return type(e).__name__
+            return str(e)
         return None
     def replace(self, old, new):
         try:
@@ -97,7 +112,7 @@ class Binding:
                 self.__body = self.__body.replace(old, new)
                 self.__dependencies.add(old)
         except Exception as e:
-            return type(e).__name__
+            return str(e)
         return None
 
     def label(self, text):
@@ -183,7 +198,7 @@ class Parsed:
         try:
             self.__raw_expr = parser.parse(self.__raw)
         except Exception as e:
-            self.__raw_error = type(e).__name__
+            self.__raw_error = str(e)
             return
         if isinstance(self.__raw_expr, tuple):
             self.__is_parametric = True
@@ -227,7 +242,7 @@ class Parsed:
                     self.__bind(parser.get_symbol_y(), self.__raw_args[0].evalf(),
                         PlotType.LINE_2D)
                 except Exception as e:
-                    self.__raw_error = type(e).__name__
+                    self.__raw_error = str(e)
             elif len(xy) == 1:
                 if xy[0] == parser.get_symbol_x():
                     self.__bind(parser.get_symbol_y(), self.__raw_args[0], PlotType.LINE_2D)
@@ -261,7 +276,7 @@ class Parsed:
                         sy.Eq(self.__raw_args[0], self.__raw_args[1]),
                         parser.get_symbol_x(), domain = sy.S.Reals)), None)
                 except Exception as e:
-                    self.__raw_error = type(e).__name__
+                    self.__raw_error = str(e)
             elif len(fv) == 0:
                 self.__bind(None, sy.Eq(self.__raw_args[0], self.__raw_args[1]), None)
             else:
@@ -285,7 +300,7 @@ class Parsed:
 
     def reset(self):
         self.__binding = copy.copy(self.__raw_binding)
-        self.__error = copy.copy(self.__raw_error)
+        self.__error = self.__raw_error
     def get_equation(self):
         if self.has_binding(): return self.get_binding().get_colour()
         return None

@@ -1,5 +1,3 @@
-import random
-
 import tkinter as tk
 
 from utils.fonts import FontManager
@@ -7,6 +5,7 @@ from utils.images import ImageManager
 from utils.parsing import Parsed
 from utils.delay import DelayTracker
 from utils.theme import Theme
+from utils.maths import PlotType
 
 class Equation(tk.Frame):
 
@@ -61,10 +60,12 @@ class Equation(tk.Frame):
         self.__colour_window_active = True
         self.__locked = False
         self.__hidden = False
+        self.__contoured = False
 
         self.__construct_colour()
         self.__construct_lock()
         self.__construct_hide()
+        self.__construct_contour()
         self.__construct_remove()
         self.__place_buttons()
 
@@ -139,10 +140,7 @@ class Equation(tk.Frame):
                 self.__colour_window_open = True
 
         self.__colour_button = self.__create_button(button_func, "colour.png")
-        self.__colour_button.configure(image = ImageManager.get_instance().get_colour(
-                self.__red.get(), self.__green.get(), self.__blue.get(),
-                self.__button_size,
-                self.__button_size))
+        update(None)
     def __construct_lock(self):
         def lock():
             self.__entry.config(state = tk.NORMAL if self.__locked else tk.DISABLED)
@@ -155,11 +153,16 @@ class Equation(tk.Frame):
             self.__update()
             self.__hide_button.config(relief = tk.SUNKEN if self.__hidden else tk.RAISED)
         self.__hide_button = self.__create_button(hide, "hide.png")
+    def __construct_contour(self):
+        def contour(self):
+            self.__contoured = not self.__contoured
+            self.__update()
+            self.__contour_button.config(relief = tk.SUNKEN if self.__contoured else tk.RAISED)
+        self.__contour_button = self.__create_button(lambda s = self : contour(s), "contour.png")
     def __construct_remove(self):
         def remove(self):
             self.pack_forget()
             self.__remove_func(self)
-
         self.__remove_button = self.__create_button(lambda s = self : remove(s), "remove.png")
     def __create_button(self, command, img_path):
         return tk.Button(self.__inner,
@@ -174,10 +177,19 @@ class Equation(tk.Frame):
         if self.__plottable:
             buttons.append(self.__colour_button)
             buttons.append(self.__hide_button)
-        elif self.__colour_window_open:
-            self.__colour_window_open = False
-            self.__colour_window.place_forget()
-        buttons.extend([self.__lock_button, self.__remove_button])
+        else:
+            self.__colour_button.place_forget()
+            self.__hide_button.place_forget()
+            if self.__colour_window_open:
+                self.__colour_window_open = False
+                self.__colour_window.place_forget()
+        buttons.append(self.__lock_button)
+        if self.__plottable and self.get_parsed().get_binding().get_plot_type() in \
+            [PlotType.SURFACE, PlotType.PARAMETRIC_SURFACE]:
+            buttons.append(self.__contour_button)
+        else:
+            self.__contour_button.place_forget()
+        buttons.append(self.__remove_button)
         for i in range(len(buttons)):
             buttons[i].place(y = (self.__button_size + self.__spacing) * i,
                 w = self.__button_size, h = self.__button_size)
@@ -213,6 +225,8 @@ class Equation(tk.Frame):
         return self.__plottable
     def is_hidden(self):
         return self.__hidden
+    def is_contoured(self):
+        return self.__contoured
     def get_text(self):
         return self.__entry.get()
     def get_parsed(self):

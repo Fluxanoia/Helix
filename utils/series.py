@@ -146,14 +146,18 @@ class SurfacePlot(HelixSeries):
         super().__init__(plot)
         check = check_arguments([self._plot.get_body()], 1, 2)[0]
         self._series = SurfaceOver2DRangeSeries(*check)
+        self.__contours = ContourPlot(plot, True)
 
     def draw(self, axis, xlim, ylim, zlim):
         self._series.start_x = xlim[0]
         self._series.end_x = xlim[1]
         self._series.start_y = ylim[0]
         self._series.end_y = ylim[1]
-        axis.plot_surface(*self._series.get_meshes(), color = self._plot.get_colour(),
-            rstride = 1, cstride = 1, linewidth = 0.1)
+        if self._plot.get_equation().is_contoured():
+            self.__contours.draw(axis, xlim, ylim, zlim)
+        else:
+            axis.plot_surface(*self._series.get_meshes(), color = self._plot.get_colour(),
+                rstride = 1, cstride = 1, linewidth = 0.1)
 
 class Parametric3DLinePlot(HelixSeries):
 
@@ -177,6 +181,7 @@ class ParametricSurfacePlot(HelixSeries):
         # TODO parametric, body should be (expr1, expr2, expr3)
         check = check_arguments(self._plot.get_body(), 3, 2)[0]
         self._series = ParametricSurfaceSeries(*check)
+        self.__contours = ContourPlot(plot, True)
 
     def draw(self, axis, xlim, ylim, zlim):
         # TODO parametric, fix range
@@ -184,13 +189,17 @@ class ParametricSurfacePlot(HelixSeries):
         self._series.end_u = xlim[1]
         self._series.start_v = ylim[0]
         self._series.end_v = ylim[1]
-        axis.plot_surface(*self._series.get_meshes(), color = self._plot.get_colour(),
-            rstride = 1, cstride = 1, linewidth = 0.1)
+        if self._plot.get_equation().is_contoured():
+            self.__contours.draw(axis, xlim, ylim, zlim)
+        else:
+            axis.plot_surface(*self._series.get_meshes(), color = self._plot.get_colour(),
+                rstride = 1, cstride = 1, linewidth = 0.1)
 
 class ContourPlot(HelixSeries):
 
-    def __init__(self, plot):
+    def __init__(self, plot, colour_shift = False):
         super().__init__(plot)
+        self.__colour_shift = colour_shift
         self._series = ContourSeries(*(check_arguments([self._plot.get_body()], 1, 2)[0]))
 
     def draw(self, axis, xlim, ylim, zlim):
@@ -198,4 +207,17 @@ class ContourPlot(HelixSeries):
         self._series.end_x = xlim[1]
         self._series.start_y = ylim[0]
         self._series.end_y = ylim[1]
-        axis.contour(*self._series.get_meshes(), colors = [self._plot.get_colour()])
+        c = self._plot.get_colour()
+        if self.__colour_shift:
+            r, g, b = c
+            factor = 0.5
+            if r + g + b / 3 < 0.5:
+                r += (1 - r) * factor
+                g += (1 - g) * factor
+                b += (1 - b) * factor
+            else:
+                r *= factor
+                g *= factor
+                b *= factor
+            c = (r, g, b)
+        axis.contour(*self._series.get_meshes(), colors = [c])

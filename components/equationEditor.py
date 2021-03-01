@@ -47,12 +47,12 @@ class EquationEditor(ScrollableFrame):
             relheight = self.__add_button_height)
 
         # TODO default project stuff
-        self.__add_entry("f(x) = x^2 + 1")
-        self.__add_entry("a = 3")
-        self.__add_entry("f(x)")
-        self.__add_entry("f(x / a)")
-        self.__add_entry("g(x, y) = sin(x) + cos(y)")
-        self.__add_entry("g(x, y)")
+        #self.__add_entry("f(x) = x^2 + 1")
+        #self.__add_entry("a = 3")
+        #self.__add_entry("f(x)")
+        #self.__add_entry("f(x / a)")
+        #self.__add_entry("g(x, y) = sin(x) + cos(y)")
+        #self.__add_entry("g(x, y)")
 
     def __add_entry(self, text = None):
         eq = Equation(self.getInnerFrame(), self.__update, self.__remove_entry)
