@@ -1,5 +1,7 @@
 import enum
 
+import tkinter as tk
+
 import matplotlib as mpl
 from matplotlib.collections import LineCollection
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -16,20 +18,30 @@ from sympy.core.relational import (Equality, GreaterThan, LessThan, Relational)
 from sympy.logic.boolalg import BooleanFunction
 
 from utils.theme import Theme
+from utils.delay import DelayTracker
 
 class Dimension(enum.Enum):
     TWO_D   = 2
     THREE_D = 3
 
 class PlotType(enum.Enum):
-    LINE_2D = Dimension.TWO_D
-    PARAMETRIC_2D = Dimension.TWO_D
-    IMPLICIT_2D = Dimension.TWO_D
+    LINE_2D = 0
+    PARAMETRIC_2D = 1
+    IMPLICIT_2D = 2
 
-    SURFACE = Dimension.THREE_D
-    PARAMETRIC_3D = Dimension.THREE_D
-    PARAMETRIC_SURFACE = Dimension.THREE_D
-    CONTOUR = Dimension.THREE_D
+    SURFACE = 3
+    PARAMETRIC_3D = 4
+    PARAMETRIC_SURFACE = 5
+    CONTOUR = 6
+
+    @staticmethod
+    def get_dim(pt):
+        if pt in [PlotType.LINE_2D, PlotType.PARAMETRIC_2D, PlotType.IMPLICIT_2D]:
+            return Dimension.TWO_D
+        if pt in [PlotType.SURFACE, PlotType.PARAMETRIC_3D, PlotType.PARAMETRIC_SURFACE, \
+            PlotType.CONTOUR]:
+            return Dimension.THREE_D
+        raise ValueError("No dimension for PlotType.")
 
 class HelixPlot(FigureCanvasTkAgg):
 
@@ -50,6 +62,9 @@ class HelixPlot(FigureCanvasTkAgg):
 
     __elev = 30
     __azim = -60
+
+    __debounce_id = None
+    __debounce_delay = 500
 
     __dim = None
 
@@ -74,7 +89,7 @@ class HelixPlot(FigureCanvasTkAgg):
         self.__axis3.set_zlim(self.__zlim)
 
         def presser(e):
-            self.get_tk_widget().focus_set()
+            self.widget().focus_set()
             press_func(e)
         self.__presser = presser
 
@@ -99,25 +114,23 @@ class HelixPlot(FigureCanvasTkAgg):
                 self.set_limits(x, y, z)
         self.__zoomer = zoomer
 
-        self.get_tk_widget().bind("<ButtonPress-1>", self.__presser)
-        self.get_tk_widget().bind("<B1-Motion>", self.__dragger)
-        self.get_tk_widget().bind('<Enter>', self.__bind_scroll)
-        self.get_tk_widget().bind('<Leave>', self.__unbind_scroll)
+        self.widget().bind("<ButtonPress-1>", self.__presser)
+        self.widget().bind("<B1-Motion>", self.__dragger)
+        self.widget().bind('<Enter>', self.__bind_scroll)
+        self.widget().bind('<Leave>', self.__unbind_scroll)
 
         self.draw()
 
     def widget(self):
         return self.get_tk_widget()
-
     def __bind_scroll(self, _event):
-        self.get_tk_widget().bind_all("<MouseWheel>", self.__zoomer)
-        self.get_tk_widget().bind_all("<Button-4>", self.__zoomer)
-        self.get_tk_widget().bind_all("<Button-5>", self.__zoomer)
-
+        self.widget().bind_all("<MouseWheel>", self.__zoomer)
+        self.widget().bind_all("<Button-4>", self.__zoomer)
+        self.widget().bind_all("<Button-5>", self.__zoomer)
     def __unbind_scroll(self, _event):
-        self.get_tk_widget().unbind_all("<MouseWheel>")
-        self.get_tk_widget().unbind_all("<Button-4>")
-        self.get_tk_widget().unbind_all("<Button-5>")
+        self.widget().unbind_all("<MouseWheel>")
+        self.widget().unbind_all("<Button-4>")
+        self.widget().unbind_all("<Button-5>")
 
     # Plot Variables
 
@@ -132,12 +145,19 @@ class HelixPlot(FigureCanvasTkAgg):
         self.__xlim = xlim
         self.__ylim = ylim
         self.__zlim = zlim
-        self.redraw()
-
+        self.redraw(False)
+        self.__debounce_redraw()
     def set_view(self, elev, azim):
         self.__elev = elev
         self.__azim = azim
-        self.redraw()
+        self.redraw(False)
+        self.__debounce_redraw()
+
+    def __debounce_redraw(self):
+        if self.__debounce_id is not None:
+            DelayTracker.get_instance().endDelay(self.widget(), self.__debounce_id)
+        self.__debounce_id = self.widget().after(self.__debounce_delay, self.redraw)
+        DelayTracker.get_instance().addDelay(self.widget(), self.__debounce_id)
 
     def set_dim(self, dim):
         if self.__dim == dim: return
@@ -150,13 +170,13 @@ class HelixPlot(FigureCanvasTkAgg):
             self.__axis = self.__axis3
         if self.__dim is not None:
             self.__figure.add_axes(self.__axis)
+        self.__limit_plot()
 
     # Plotting
 
     def remove_plots(self):
         self.__data = []
         if self.__dim is not None: self.__axis.clear()
-
     def add_plots_2d(self, plots):
         if self.__dim is not Dimension.TWO_D:
             raise ValueError("Incorrect plot dimension.")
@@ -198,7 +218,6 @@ class HelixPlot(FigureCanvasTkAgg):
                     True, 0, 300, p.get_colour()))
             else:
                 raise ValueError("Incorrect parsed dimension.")
-
     def add_plots_3d(self, parsed):
         if self.__dim is not Dimension.THREE_D:
             raise ValueError("Incorrect plot dimension.")
@@ -222,12 +241,10 @@ class HelixPlot(FigureCanvasTkAgg):
                 self.__data[-1].line_color = p.get_colour()
             else:
                 raise ValueError("Incorrect parsed dimension.")
-
-    def redraw(self):
-        if self.__dim is None: return
-
+    def __plot(self):
+        DelayTracker.get_instance().removeDelay(self.widget(), self.__debounce_id)
+        self.__debounce_id = None
         self.__axis.clear()
-
         for s in self.__data:
             if s.is_3D:
                 s.start_x = self.__xlim[0]
@@ -265,21 +282,22 @@ class HelixPlot(FigureCanvasTkAgg):
                         self.__axis.contourf(xarray, yarray, zarray, cmap = colormap)
             else:
                 raise NotImplementedError("Unimplemented plot type in HelixPlot")
-
+    def __limit_plot(self):
         if self.__dim is Dimension.TWO_D:
             self.__axis2.set_xlim(self.__xlim)
             self.__axis2.set_ylim(self.__ylim)
             self.__axis2.spines['left'].set_position('center')
             self.__axis2.spines['bottom'].set_position('center')
-
         if self.__dim is Dimension.THREE_D:
             self.__axis3.set_xlim(self.__xlim)
             self.__axis3.set_ylim(self.__ylim)
             self.__axis3.set_zlim(self.__zlim)
             self.__axis3.view_init(self.__elev, self.__azim)
-
             self.__axis3.set_xlabel('$x$', fontsize = 20)
             self.__axis3.set_ylabel('$y$', fontsize = 20)
             self.__axis3.set_zlabel('$z$', fontsize = 20)
-
+    def redraw(self, replot = True):
+        if self.__dim is None: return
+        if replot: self.__plot()
+        self.__limit_plot()
         self.draw()

@@ -79,6 +79,7 @@ class Binding:
 
     __name = None
     __body = None
+    __dependencies = set()
     __plot_type = None
     __equation = None
     __colour = None
@@ -88,15 +89,20 @@ class Binding:
         self.__body = body
         self.__plot_type = plot_type
 
-    def subs(self, subst):
+    def subs(self, substitutions):
         try:
-            self.__body = self.__body.subs(subst)
+            for (old, new) in substitutions:
+                if old in self.get_free_symbols():
+                    self.__body = self.__body.subs(old, new)
+                    self.__dependencies.add(old)
         except Exception as e:
             return type(e).__name__
         return None
-    def replace(self, x, y):
+    def replace(self, old, new):
         try:
-            self.__body = self.__body.replace(x, y)
+            if any(map(lambda v : isinstance(v, old), self.get_free_symbols())):
+                self.__body = self.__body.replace(old, new)
+                self.__dependencies.add(old)
         except Exception as e:
             return type(e).__name__
         return None
@@ -114,6 +120,8 @@ class Binding:
         parser = Parser.get_instance()
         return list(filter(lambda s : not (s in parser.get_default_symbols()),
             self.get_symbols()))
+    def get_raw_free_symbols(self):
+        return self.__dependencies.union(set(self.get_free_symbols()))
 
     def binds_var(self):
         return isinstance(self.__name, sy.Symbol)
@@ -124,6 +132,8 @@ class Binding:
         return self.__name
     def get_body(self):
         return self.__body
+    def get_dependencies(self):
+        return self.__dependencies
     def get_plot_type(self):
         return self.__plot_type
     def get_equation(self):
@@ -207,7 +217,7 @@ class Parsed:
                 pass # TODO parametric
             elif len(xy) == 0:
                 try:
-                    self.__bind(parser.get_symbol_y(), self.__raw_args[0].evalf(), 
+                    self.__bind(parser.get_symbol_y(), self.__raw_args[0].evalf(),
                         PlotType.LINE_2D)
                 except Exception as e:
                     self.__raw_error = type(e).__name__
@@ -219,7 +229,7 @@ class Parsed:
         elif len(self.__raw_args) == 2:
             if self.__is_parametric:
                 pass # TODO parametric
-            elif self.__raw_relation != Equality:
+            elif self.__raw_relation in [GreaterThan, LessThan, StrictGreaterThan, StrictLessThan]:
                 if callable(self.__raw_relation):
                     self.__bind(None, self.__raw_relation(self.__raw_args[0], self.__raw_args[1]),
                         PlotType.IMPLICIT_2D)
@@ -234,8 +244,8 @@ class Parsed:
                     self.__raw_error = "Duplicate parameters."
             elif parser.get_symbol_y() in xy:
                 try:
-                    self.__bind(parser.get_symbol_y(), sy.solve(sy.Eq(self.__raw_args[0],
-                        self.__raw_args[1]), parser.get_symbol_y()), PlotType.LINE_2D)
+                    self.__bind(None, sy.Eq(self.__raw_args[0], self.__raw_args[1]),
+                        PlotType.IMPLICIT_2D)
                 except:
                     self.__raw_error = "Unsolvable."
             elif parser.get_symbol_x() in xy:

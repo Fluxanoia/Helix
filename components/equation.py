@@ -217,7 +217,7 @@ class Equation(tk.Frame):
         self.__parsed.set_equation(self)
         self.__parsed.set_colour((self.__red.get() / 255.0,
             self.__green.get() / 255.0, self.__blue.get() / 255.0))
-        self.__update_fun()
+        self.__update_fun(self)
     def set_width(self, w):
         self.__inner.configure(width = w)
 

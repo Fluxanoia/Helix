@@ -61,19 +61,19 @@ class EquationViewer(tk.Frame):
         size = 40
         self.__2d_button.place(x = 10, y = 10, w = size, h = size)
         self.__3d_button.place(x = 10, y = size + 20, w = size, h = size)
-    
+
     def __modeSwitcher(self, mode):
         self.__mode = mode
         self.__process_plots()
         self.__draw()
     def __process_plots(self):
         self.__plots = list(filter(lambda p : isinstance(p.get_plot_type(), PlotType) and \
-            p.get_plot_type().value is self.__mode, self.__raw_plots))
+            PlotType.get_dim(p.get_plot_type()) is self.__mode, self.__raw_plots))
     def plot(self, plots):
         self.__raw_plots = plots
         self.__process_plots()
         self.__draw()
-    
+
     def __draw_plot2d(self):
         self.__plot.set_dim(Dimension.TWO_D)
         self.__plot.remove_plots()

@@ -53,17 +53,17 @@ class Helix:
 
     def __constructMenu(self):
         # File Menu
-        self.__file_menu.add_command(label = "New")
-        self.__file_menu.add_command(label = "Open")
-        self.__file_menu.add_command(label = "Save")
-        self.__file_menu.add_separator()
+        #self.__file_menu.add_command(label = "New")
+        #self.__file_menu.add_command(label = "Open")
+        #self.__file_menu.add_command(label = "Save")
+        #self.__file_menu.add_separator()
         self.__file_menu.add_command(label = "Exit", command = self.__root.quit)
         self.__menu.add_cascade(label = "File", menu = self.__file_menu)
         # Edit Menu
-        self.__edit_menu.add_command(label = "Cut")
-        self.__edit_menu.add_command(label = "Copy")
-        self.__edit_menu.add_command(label = "Paste")
-        self.__menu.add_cascade(label = "Edit", menu = self.__edit_menu)
+        #self.__edit_menu.add_command(label = "Cut")
+        #self.__edit_menu.add_command(label = "Copy")
+        #self.__edit_menu.add_command(label = "Paste")
+        #self.__menu.add_cascade(label = "Edit", menu = self.__edit_menu)
         # About Button
         self.__menu.add_command(label = "About", command = lambda :
             showinfo("Helix Graphing Tool", "Written by Tyler Wright\n"
