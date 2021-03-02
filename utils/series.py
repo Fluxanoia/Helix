@@ -10,8 +10,7 @@ from mpl_toolkits.mplot3d.art3d import Line3DCollection
 import sympy as sy
 from sympy.plotting.plot import _matplotlib_list, check_arguments, \
     LineOver1DRangeSeries, SurfaceOver2DRangeSeries, \
-    Parametric2DLineSeries, Parametric3DLineSeries, ParametricSurfaceSeries, \
-    ContourSeries
+    Parametric2DLineSeries, Parametric3DLineSeries, ParametricSurfaceSeries
 from sympy.plotting.plot_implicit import ImplicitSeries
 from sympy.core.relational import (Equality, GreaterThan, LessThan, Relational)
 from sympy.logic.boolalg import BooleanFunction
@@ -139,8 +138,6 @@ class HelixSeries(ABC):
             return Parametric3DLinePlot(plot)
         elif pt == PlotType.PARAMETRIC_SURFACE:
             return ParametricSurfacePlot(plot)
-        elif pt == PlotType.CONTOUR:
-            return ContourPlot(plot)
         raise ValueError("Unexpected plot type.")
 
 class Line2DPlot(HelixSeries):
@@ -225,7 +222,6 @@ class SurfacePlot(HelixSeries):
         super().__init__(plot)
         check = check_arguments([self._plot.get_body()], 1, 2)[0]
         self._series = SurfaceOver2DRangeSeries(*check)
-        self.__contours = ContourPlot(plot, True)
 
     @overrides
     def _generate_data(self, xlim, ylim, zlim):
@@ -235,7 +231,7 @@ class SurfacePlot(HelixSeries):
     def draw(self, axis, xlim, ylim, zlim):
         self._expand_data(xlim, ylim, zlim)
         if self._plot.get_equation().is_contoured():
-            self.__contours.draw(axis, xlim, ylim, zlim)
+            axis.contour(*self._get_mesh(xlim, ylim), colors = [self._plot.get_colour()])
         else:
             axis.plot_surface(*self._get_mesh(xlim, ylim), color = self._plot.get_colour(),
                 rstride = 1, cstride = 1, linewidth = 0.1)
@@ -262,7 +258,6 @@ class ParametricSurfacePlot(HelixSeries):
         # TODO parametric, body should be (expr1, expr2, expr3)
         check = check_arguments(self._plot.get_body(), 3, 2)[0]
         self._series = ParametricSurfaceSeries(*check)
-        self.__contours = ContourPlot(plot, True)
 
     def draw(self, axis, xlim, ylim, zlim):
         # TODO parametric, fix range
@@ -271,34 +266,7 @@ class ParametricSurfacePlot(HelixSeries):
         self._series.start_v = ylim[0]
         self._series.end_v = ylim[1]
         if self._plot.get_equation().is_contoured():
-            self.__contours.draw(axis, xlim, ylim, zlim)
+            axis.contour(*self._series.get_meshes(), colors = [self._plot.get_colour()])
         else:
             axis.plot_surface(*self._series.get_meshes(), color = self._plot.get_colour(),
                 rstride = 1, cstride = 1, linewidth = 0.1)
-
-class ContourPlot(HelixSeries):
-
-    def __init__(self, plot, colour_shift = False):
-        super().__init__(plot)
-        self.__colour_shift = colour_shift
-        self._series = ContourSeries(*(check_arguments([self._plot.get_body()], 1, 2)[0]))
-
-    def draw(self, axis, xlim, ylim, zlim):
-        self._series.start_x = xlim[0]
-        self._series.end_x = xlim[1]
-        self._series.start_y = ylim[0]
-        self._series.end_y = ylim[1]
-        c = self._plot.get_colour()
-        if self.__colour_shift:
-            r, g, b = c
-            factor = 0.5
-            if r + g + b / 3 < 0.5:
-                r += (1 - r) * factor
-                g += (1 - g) * factor
-                b += (1 - b) * factor
-            else:
-                r *= factor
-                g *= factor
-                b *= factor
-            c = (r, g, b)
-        axis.contour(*self._series.get_meshes(), colors = [c])
