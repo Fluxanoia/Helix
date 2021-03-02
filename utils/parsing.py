@@ -251,19 +251,26 @@ class Parsed:
         elif len(self.__raw_args) == 2:
             if self.__is_parametric:
                 pass # TODO parametric
-            elif self.__raw_relation in [GreaterThan, LessThan, StrictGreaterThan, StrictLessThan]:
+            elif isinstance(self.__raw_relation,
+                (GreaterThan, LessThan, StrictGreaterThan, StrictLessThan)):
                 if callable(self.__raw_relation):
                     self.__bind(None, self.__raw_relation(self.__raw_args[0], self.__raw_args[1]),
                         PlotType.IMPLICIT_2D)
                 else:
                     raise ValueError("Uncallable relation.")
             elif isinstance(self.__raw_args[0], sy.Function):
-                args = self.__raw_args[0].args
-                if len(args) == len(set(args)):
-                    self.__bind(sy.Function(self.__raw_args[0].name),
-                        sy.Lambda(args, self.__raw_args[1]), None)
+                if hasattr(self.__raw_args[0], 'name'):
+                    args = self.__raw_args[0].args
+                    if any([not isinstance(a, sy.Symbol) for a in args]):
+                        self.__raw_error = "Function arguments must be Symbols."
+                    else:
+                        if len(args) == len(set(args)):
+                            self.__bind(sy.Function(self.__raw_args[0].name),
+                                sy.Lambda(args, self.__raw_args[1]), None)
+                        else:
+                            self.__raw_error = "Duplicate parameters."
                 else:
-                    self.__raw_error = "Duplicate parameters."
+                    self.__raw_error = "Multiple definitions."
             elif parser.get_symbol_y() in xy:
                 try:
                     self.__bind(None, sy.Eq(self.__raw_args[0], self.__raw_args[1]),

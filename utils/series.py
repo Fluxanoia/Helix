@@ -1,4 +1,8 @@
+import math
 from abc import ABC, abstractmethod
+
+import numpy as np
+import numpy.ma as ma
 
 from matplotlib.collections import LineCollection
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
@@ -14,27 +18,111 @@ from sympy.logic.boolalg import BooleanFunction
 
 from utils.parsing import Parser
 from utils.maths import PlotType
+from utils.override import overrides
 
 class HelixSeries(ABC):
 
     def __init__(self, plot):
         self._plot = plot
-        self._series = None
         self._data = []
+        self._series = None
         self._min_x = None
         self._max_x = None
         self._min_y = None
         self._max_y = None
+        self._min_z = None
+        self._max_z = None
+        self._point_density = 2.5
 
     @abstractmethod
-    def draw(self, axis, xlim, ylim, zlim):
-        pass
+    def draw(self, axis, xlim, ylim, zlim): pass
 
-    def _unbounded(self):
-        return any([x is None for x in [self._min_x, self._max_x, self._min_y, self._max_y]])
+    def _expand_data(self, xlim, ylim, zlim):
+        if self.__unbounded():
+            self._generate_data(xlim, ylim, zlim)
+            self._min_x, self._max_x = xlim
+            self._min_y, self._max_y = ylim
+            self._min_z, self._max_z = zlim
+        else:
+            if xlim[0] < self._min_x:
+                self._generate_data((xlim[0], self._min_x), self.__y(), self.__z())
+                self._min_x = xlim[0]
+            if xlim[1] > self._max_x:
+                self._generate_data((self._max_x, xlim[1]), self.__y(), self.__z())
+                self._max_x = xlim[1]
+            if ylim[0] < self._min_y:
+                self._generate_data(self.__x(), (ylim[0], self._min_y), self.__z())
+                self._min_y = ylim[0]
+            if ylim[1] > self._max_y:
+                self._generate_data(self.__x(), (self._max_y, ylim[1]), self.__z())
+                self._max_y = ylim[1]
+            if zlim[0] < self._min_z:
+                self._generate_data(self.__x(), self.__y(), (zlim[0], self._min_z))
+                self._min_z = zlim[0]
+            if zlim[1] > self._max_z:
+                self._generate_data(self.__x(), self.__y(), (self._max_z, zlim[1]))
+                self._max_z = zlim[1]
+    def _generate_data(self, xlim, ylim, zlim): pass
 
-    def get_plot(self):
-        return self._plot
+    def __x(self): return (self._min_x, self._max_x)
+    def __y(self): return (self._min_y, self._max_y)
+    def __z(self): return (self._min_z, self._max_z)
+    def _dx(self, xlim): return xlim != self.__x()
+    def _dy(self, ylim): return ylim != self.__y()
+    def _dz(self, zlim): return zlim != self.__z()
+    def __unbounded(self): return any([x is None for x in self.__x() + self.__y() + self.__z()])
+
+    def get_plot(self): return self._plot
+
+    def _expand_mesh(self, xlim, ylim):
+        self._series.start_x, self._series.end_x = xlim
+        self._series.start_y, self._series.end_y = ylim
+        if self.__unbounded():
+            self._series.nb_of_points_x = math.ceil((xlim[1] - xlim[0]) * self._point_density)
+            self._series.nb_of_points_y = math.ceil((ylim[1] - ylim[0]) * self._point_density)
+            self._data = self._series.get_meshes()
+        else:
+            prepend_x = xlim[0] < self._min_x
+            append_x = xlim[1] > self._max_x
+            prepend_y = ylim[0] < self._min_y
+            append_y = ylim[1] > self._max_y
+            assert len([x for x in [prepend_x, append_x, prepend_y, append_y] if x]) == 1
+            if prepend_x or append_x:
+                self._series.nb_of_points_x = math.ceil((xlim[1] - xlim[0]) * self._point_density)
+                self._series.nb_of_points_y = len(self._data[1])
+                x, y, z = self._series.get_meshes()
+                if prepend_x:
+                    x = np.concatenate((x, self._data[0]), axis = 1)
+                    y = np.concatenate((y, self._data[1]), axis = 1)
+                    z = ma.concatenate((z, self._data[2]), axis = 1)
+                if append_x:
+                    x = np.concatenate((self._data[0], x), axis = 1)
+                    y = np.concatenate((self._data[1], y), axis = 1)
+                    z = ma.concatenate((self._data[2], z), axis = 1)
+            if prepend_y or append_y:
+                self._series.nb_of_points_x = len(self._data[0][0])
+                self._series.nb_of_points_y = math.ceil((ylim[1] - ylim[0]) * self._point_density)
+                x, y, z = self._series.get_meshes()
+                if prepend_y:
+                    x = np.concatenate((x, self._data[0]), axis = 0)
+                    y = np.concatenate((y, self._data[1]), axis = 0)
+                    z = ma.concatenate((z, self._data[2]), axis = 0)
+                if append_y:
+                    x = np.concatenate((self._data[0], x), axis = 0)
+                    y = np.concatenate((self._data[1], y), axis = 0)
+                    z = ma.concatenate((self._data[2], z), axis = 0)
+            self._data = (x, y, z)
+    def _get_mesh(self, xlim, ylim):
+        x1, x2 = (0, len(self._data[0][0]) - 1)
+        y1, y2 = (0, len(self._data[1]) - 1)
+        while self._data[0][0][x1] < xlim[0]: x1 += 1
+        while self._data[0][0][x2] >= xlim[1]: x2 -= 1
+        while self._data[1][y1][0] < ylim[0]: y1 += 1
+        while self._data[1][y2][0] >= ylim[1]: y2 -= 1
+        x2 += 1
+        y2 += 1
+        return (self._data[0][y1:y2, x1:x2], self._data[1][y1:y2, x1:x2],
+            self._data[2][y1:y2, x1:x2])
 
     @staticmethod
     def generate_series(plot):
@@ -62,11 +150,16 @@ class Line2DPlot(HelixSeries):
         check = check_arguments([self._plot.get_body()], 1, 1)[0]
         self._series = LineOver1DRangeSeries(*check)
 
+    @overrides
+    def _generate_data(self, xlim, ylim, zlim):
+        if self._dx(xlim):
+            self._series.start, self._series.end = xlim
+            self._data.extend(self._series.get_segments())
+
+    @overrides
     def draw(self, axis, xlim, ylim, zlim):
-        self._series.start = xlim[0]
-        self._series.end = xlim[1]
-        axis.add_collection(LineCollection(self._series.get_segments(),
-            colors = self._plot.get_colour()))
+        self._expand_data(xlim, ylim, zlim)
+        axis.add_collection(LineCollection(self._data, colors = self._plot.get_colour()))
 
 class Parametric2DPlot(HelixSeries):
 
@@ -114,30 +207,16 @@ class Implicit2DPlot(HelixSeries):
         self._series = ImplicitSeries(expr, x, y, has_equality,
             True, 0, 300, self._plot.get_colour())
 
-    def __generate_area(self, x1, x2, y1, y2):
-        self._series.start_x = x1
-        self._series.end_x = x2
-        self._series.start_y = y1
-        self._series.end_y = y2
-        self._data.extend(_matplotlib_list(self._series.get_raster()[0]))
+    @overrides
+    def _generate_data(self, xlim, ylim, zlim):
+        if self._dx(xlim) or self._dy(ylim):
+            self._series.start_x, self._series.end_x = xlim
+            self._series.start_y, self._series.end_y = ylim
+            self._data.extend(_matplotlib_list(self._series.get_raster()[0]))
+
+    @overrides
     def draw(self, axis, xlim, ylim, zlim):
-        if self._unbounded():
-            self.__generate_area(*xlim, *ylim)
-            self._min_x, self._max_x = xlim
-            self._min_y, self._max_y = ylim
-        else:
-            if xlim[0] < self._min_x:
-                self.__generate_area(xlim[0], self._min_x, self._min_y, self._max_y)
-                self._min_x = xlim[0]
-            if xlim[1] > self._max_x:
-                self.__generate_area(self._max_x, xlim[1], self._min_y, self._max_y)
-                self._max_x = xlim[1]
-            if ylim[0] < self._min_y:
-                self.__generate_area(self._min_x, self._max_x, ylim[0], self._min_y)
-                self._min_y = ylim[0]
-            if ylim[1] > self._max_y:
-                self.__generate_area(self._min_x, self._max_x, self._max_y, ylim[1])
-                self._max_y = ylim[1]
+        self._expand_data(xlim, ylim, zlim)
         axis.fill(*self._data, facecolor = self._plot.get_colour())
 
 class SurfacePlot(HelixSeries):
@@ -148,15 +227,17 @@ class SurfacePlot(HelixSeries):
         self._series = SurfaceOver2DRangeSeries(*check)
         self.__contours = ContourPlot(plot, True)
 
+    @overrides
+    def _generate_data(self, xlim, ylim, zlim):
+        if self._dx(xlim) or self._dy(ylim): self._expand_mesh(xlim, ylim)
+
+    @overrides
     def draw(self, axis, xlim, ylim, zlim):
-        self._series.start_x = xlim[0]
-        self._series.end_x = xlim[1]
-        self._series.start_y = ylim[0]
-        self._series.end_y = ylim[1]
+        self._expand_data(xlim, ylim, zlim)
         if self._plot.get_equation().is_contoured():
             self.__contours.draw(axis, xlim, ylim, zlim)
         else:
-            axis.plot_surface(*self._series.get_meshes(), color = self._plot.get_colour(),
+            axis.plot_surface(*self._get_mesh(xlim, ylim), color = self._plot.get_colour(),
                 rstride = 1, cstride = 1, linewidth = 0.1)
 
 class Parametric3DLinePlot(HelixSeries):

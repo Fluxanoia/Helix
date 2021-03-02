@@ -102,7 +102,7 @@ class HelixPlot(FigureCanvasTkAgg):
     def set_limits(self, xlim, ylim, zlim = None):
         self.__xlim = xlim
         self.__ylim = ylim
-        self.__zlim = zlim
+        if not zlim is None: self.__zlim = zlim
         self.redraw(False)
         self.__debounce_redraw()
     def set_view(self, elev, azim):
