@@ -3,6 +3,7 @@ from tkinter.messagebox import showinfo
 
 from utils.fonts import FontManager
 from utils.images import ImageManager
+from utils.files import FileManager
 from utils.theme import Theme
 from utils.parsing import Parser
 from utils.delay import DelayTracker
@@ -14,20 +15,24 @@ class Helix:
 
     def __init__(self):
         self.__root = Tk()
+        self.__root.iconbitmap(ImageManager.get_images_path("icon.ico"))
 
         self.__fonts = FontManager(self.__root)
         self.__images = ImageManager()
+        self.__files = FileManager()
         self.__theme = Theme()
         self.__parser = Parser()
         self.__delayTracker = DelayTracker()
+
+        settings = self.__files.load_file("settings.txt", {
+                "plot_point_max" : "600",
+                "plot_point_min" : "50"})
 
         self.__width = 1280
         self.__height = 720
 
         self.__menu = Menu(self.__root)
         self.__file_menu = Menu(self.__menu, tearoff = 0)
-        self.__edit_menu = Menu(self.__menu, tearoff = 0)
-        self.__help_menu = Menu(self.__menu, tearoff = 0)
 
         self.__frame_editor = None
         self.__frame_viewer = None
@@ -36,6 +41,7 @@ class Helix:
         self.__constructWindow()
         self.__constructMenu()
         self.__constructPanels()
+
         self.__root.lift()
 
     def __constructWindow(self):
@@ -48,17 +54,12 @@ class Helix:
 
     def __constructMenu(self):
         # File Menu
-        #self.__file_menu.add_command(label = "New")
-        #self.__file_menu.add_command(label = "Open")
-        #self.__file_menu.add_command(label = "Save")
-        #self.__file_menu.add_separator()
+        self.__file_menu.add_command(label = "New Project")
+        self.__file_menu.add_command(label = "Load Project", command = self.__files.load_project)
+        self.__file_menu.add_command(label = "Save Project", command = self.__files.save_project)
+        self.__file_menu.add_separator()
         self.__file_menu.add_command(label = "Exit", command = self.__root.quit)
         self.__menu.add_cascade(label = "File", menu = self.__file_menu)
-        # Edit Menu
-        #self.__edit_menu.add_command(label = "Cut")
-        #self.__edit_menu.add_command(label = "Copy")
-        #self.__edit_menu.add_command(label = "Paste")
-        #self.__menu.add_cascade(label = "Edit", menu = self.__edit_menu)
         # About Button
         self.__menu.add_command(label = "About", command = lambda :
             showinfo("Helix Graphing Tool", "Written by Tyler Wright\n"

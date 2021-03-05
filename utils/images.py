@@ -1,5 +1,6 @@
-import os
 from PIL import Image, ImageTk
+
+from utils.files import FileManager
 
 class ImageManager:
 
@@ -16,7 +17,6 @@ class ImageManager:
             raise Exception("Invalid initialistion of ImageManager.")
         ImageManager.__instance = self
         self.__images = {}
-        self.__dir = os.path.join(os.path.dirname(__file__), '..') + "\\images\\"
 
     def get_colour(self, r, g, b, width = None, height = None):
         if width is None or height is None:
@@ -31,7 +31,7 @@ class ImageManager:
         return self.__images[name][(width, height)]
 
     def get_image(self, name, width = None, height = None):
-        name = self.__dir + name
+        name = ImageManager.get_images_path(name)
         if self.__images.get(name, None) is None:
             self.__images[name] = { None : Image.open(name) }
         img = self.__images[name][None]
@@ -43,3 +43,7 @@ class ImageManager:
             self.__images[name][(width, height)] = ImageTk.PhotoImage(
                 img.resize((width, height), Image.ANTIALIAS))
         return self.__images[name][(width, height)]
+
+    @staticmethod
+    def get_images_path(*args):
+        return FileManager.get_path("images", *args)

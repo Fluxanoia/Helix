@@ -1,4 +1,3 @@
-
 class DelayTracker:
 
     __instance = None
