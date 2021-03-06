@@ -9,10 +9,18 @@ from utils.maths import PlotType
 
 class Equation(tk.Frame):
 
+    TEXT_KEY = "text"
+    COLOUR_KEY = "colour"
+    LOCK_KEY = "locked"
+    HIDE_KEY = "hidden"
+    CONTOUR_KEY = "contoured"
+
     __counter = 0
 
-    def __init__(self, parent, update_fun, remove_func):
+    def __init__(self, parent, update_fun, remove_func, settings = None):
         super().__init__(parent)
+
+        if settings is None: settings = {}
 
         self.__update_fun = update_fun
         self.__remove_func = remove_func
@@ -35,6 +43,7 @@ class Equation(tk.Frame):
         self.__inner.pack(anchor = tk.CENTER, fill = tk.BOTH, expand = True)
 
         self.__entry_var = tk.StringVar()
+        self.__entry_var.set(settings.get(Equation.TEXT_KEY, ""))
         self.__entry_var.trace('w', self.__debounce_update)
         self.__entry = tk.Entry(self.__inner, textvariable = self.__entry_var)
         FontManager.get_instance().configure_text(self.__entry)
@@ -62,16 +71,16 @@ class Equation(tk.Frame):
         self.__hidden = False
         self.__contoured = False
 
-        self.__construct_colour()
-        self.__construct_lock()
-        self.__construct_hide()
-        self.__construct_contour()
+        self.__construct_colour(settings)
+        self.__construct_lock(settings)
+        self.__construct_hide(settings)
+        self.__construct_contour(settings)
         self.__construct_remove()
         self.__place_buttons()
 
         self.pack(fill = tk.BOTH, expand = True)
 
-    def __construct_colour(self):
+    def __construct_colour(self, settings):
         theme = Theme.get_instance()
 
         def __close_colour_window():
@@ -126,12 +135,16 @@ class Equation(tk.Frame):
         self.__blue.pack()
 
         colours = theme.get_plot_colours()
-        colour = colours[Equation.__counter]
+        colour = settings.get(Equation.COLOUR_KEY, None)
+        if colour is None:
+            colour = colours[Equation.__counter]
+            Equation.__counter += 1
+            Equation.__counter %= len(colours)
+        else:
+            colour = list(map(int, colour.split(" ")))
         self.__red.set(colour[0])
         self.__green.set(colour[1])
         self.__blue.set(colour[2])
-        Equation.__counter += 1
-        Equation.__counter %= len(colours)
 
         def button_func():
             if not self.__colour_window_open:
@@ -141,24 +154,27 @@ class Equation(tk.Frame):
 
         self.__colour_button = self.__create_button(button_func, "colour.png")
         update(None)
-    def __construct_lock(self):
+    def __construct_lock(self, settings):
         def lock():
             self.__entry.config(state = tk.NORMAL if self.__locked else tk.DISABLED)
             self.__locked = not self.__locked
             self.__lock_button.config(relief = tk.SUNKEN if self.__locked else tk.RAISED)
         self.__lock_button = self.__create_button(lock, "lock.png")
-    def __construct_hide(self):
+        if bool(settings.get(Equation.LOCK_KEY, False)): lock()
+    def __construct_hide(self, settings):
         def hide():
             self.__hidden = not self.__hidden
             self.__update()
             self.__hide_button.config(relief = tk.SUNKEN if self.__hidden else tk.RAISED)
         self.__hide_button = self.__create_button(hide, "hide.png")
-    def __construct_contour(self):
-        def contour(self):
+        if bool(settings.get(Equation.HIDE_KEY, False)): hide()
+    def __construct_contour(self, settings):
+        def contour():
             self.__contoured = not self.__contoured
             self.__update()
             self.__contour_button.config(relief = tk.SUNKEN if self.__contoured else tk.RAISED)
-        self.__contour_button = self.__create_button(lambda s = self : contour(s), "contour.png")
+        self.__contour_button = self.__create_button(contour, "contour.png")
+        if bool(settings.get(Equation.CONTOUR_KEY, False)): contour()
     def __construct_remove(self):
         def remove(self):
             self.pack_forget()
@@ -171,6 +187,16 @@ class Equation(tk.Frame):
                 img_path,
                 self.__button_size,
                 self.__button_size))
+
+    def get_settings(self):
+        settings = {}
+        settings[Equation.TEXT_KEY] = self.get_text()
+        settings[Equation.COLOUR_KEY] = str(self.__red.get()) + " " \
+            + str(self.__green.get()) + " " + str(self.__blue.get())
+        settings[Equation.LOCK_KEY] = int(self.__locked)
+        settings[Equation.HIDE_KEY] = int(self.__hidden)
+        settings[Equation.CONTOUR_KEY] = int(self.__contoured)
+        return settings
 
     def __place_buttons(self):
         buttons = []
@@ -198,13 +224,15 @@ class Equation(tk.Frame):
             DelayTracker.get_instance().end_delay(self, self.__debounce_id)
         self.__debounce_id = self.after(self.__debounce_delay, self.__update)
         DelayTracker.get_instance().add_delay(self, self.__debounce_id)
-    def __update(self, *_args):
+    def update(self):
         DelayTracker.get_instance().remove_delay(self, self.__debounce_id)
         self.__debounce_id = None
         self.__parsed = Parsed(self.get_text())
         self.__parsed.set_equation(self)
         self.__parsed.set_colour((self.__red.get() / 255.0,
             self.__green.get() / 255.0, self.__blue.get() / 255.0))
+    def __update(self, *_args):
+        self.update()
         self.__update_fun(self)
     def set_width(self, w):
         self.__inner.configure(width = w)

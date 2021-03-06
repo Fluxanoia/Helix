@@ -7,6 +7,12 @@ from components.plot import HelixPlot
 
 class EquationViewer(tk.Frame):
 
+    DIM_KEY = "view_dimension"
+    RECT_KEY = "view_rect"
+    ELEV_KEY = "view_elev"
+    AZIM_KEY = "view_azim"
+    CUBOID_KEY = "view_cuboid"
+
     def __init__(self, parent, width):
         super().__init__(parent)
         Theme.get_instance().configure_viewer(self)
@@ -47,9 +53,9 @@ class EquationViewer(tk.Frame):
         self.__plot.widget().pack(fill = tk.BOTH, expand = True)
     def __constructDimensionButtons(self):
         self.__2d_button = tk.Button(self.__frame, text = "2D",
-            command = lambda : self.__modeSwitcher(Dimension.TWO_D))
+            command = lambda : self.__mode_switcher(Dimension.TWO_D))
         self.__3d_button = tk.Button(self.__frame, text = "3D",
-            command = lambda : self.__modeSwitcher(Dimension.THREE_D))
+            command = lambda : self.__mode_switcher(Dimension.THREE_D))
         Theme.get_instance().configure_viewer_button(self.__2d_button)
         Theme.get_instance().configure_viewer_button(self.__3d_button)
         FontManager.get_instance().configure_text(self.__2d_button)
@@ -58,9 +64,25 @@ class EquationViewer(tk.Frame):
         self.__2d_button.place(x = 10, y = 10, w = size, h = size)
         self.__3d_button.place(x = 10, y = size + 20, w = size, h = size)
 
-    def __modeSwitcher(self, mode):
+    def set_settings(self, settings):
+        self.__view_rect = list(map(float, settings[EquationViewer.RECT_KEY].split(" ")))
+        self.__elev = float(settings[EquationViewer.ELEV_KEY])
+        self.__azim = float(settings[EquationViewer.AZIM_KEY])
+        self.__view_cuboid = list(map(float, settings[EquationViewer.CUBOID_KEY].split(" ")))
+        self.__mode_switcher(Dimension(int(settings[EquationViewer.DIM_KEY])))
+        self.__plot.set_view(self.__elev, self.__azim)
+    def add_settings(self, settings):
+        settings[EquationViewer.DIM_KEY] = self.__mode.value
+        settings[EquationViewer.RECT_KEY] = " ".join(map(str, self.__view_rect))
+        settings[EquationViewer.ELEV_KEY] = str(self.__elev)
+        settings[EquationViewer.AZIM_KEY] = str(self.__azim)
+        settings[EquationViewer.CUBOID_KEY] = " ".join(map(str, self.__view_cuboid))
+        return settings
+
+    def __mode_switcher(self, mode):
         self.__mode = mode
         self.__plot.set_dim(mode)
+        self.__plot.set_limits(*self.get_lims())
         self.__process_plots()
         self.__draw()
     def __process_plots(self):

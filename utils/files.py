@@ -60,25 +60,25 @@ class FileManager:
             for (x, y) in content.items():
                 file.write(str(x) + FileManager.DELIM + str(y) + "\n")
 
-    def load_project(self):
+    def load_project(self, default_settings = None):
         path = filedialog.askopenfilename(title = "Loading a Project",
             filetypes = [("Helix Project Files", "*" + FileManager.PROJECT_EXT)],
             defaultextension = FileManager.PROJECT_EXT)
         data = None
         try:
-            data = self.__load_file(path)
+            data = self.__load_file(path, default_settings)
             if data is None:
                 raise ValueError("No data found, does the file exist?")
         except Exception as e:
             showinfo("Helix Graphing Tool - Project Open Error",
                 "Could not open the requested project:\n" + str(e))
         return data
-    def save_project(self):
+    def save_project(self, settings):
         path = filedialog.asksaveasfilename(title = "Saving the Project",
             filetypes = [("Helix Project Files", "*" + FileManager.PROJECT_EXT)],
             defaultextension = FileManager.PROJECT_EXT)
         try:
-            self.__overwrite_file(path, {})
+            self.__overwrite_file(path, settings)
         except Exception as e:
             showinfo("Helix Graphing Tool - Project Save Error",
                 "Could not save the project:\n" + str(e))

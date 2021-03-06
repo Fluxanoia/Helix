@@ -1,3 +1,5 @@
+import ast
+
 import tkinter as tk
 
 from utils.theme import Theme
@@ -15,6 +17,8 @@ class EquationDivider(tk.Frame):
         self.pack(fill = tk.BOTH, expand = True)
 
 class EquationEditor(ScrollableFrame):
+
+    EQUATION_KEY = "eq"
 
     def __init__(self, parent, width, plotter):
         super().__init__(parent, self.__entry_config)
@@ -46,50 +50,61 @@ class EquationEditor(ScrollableFrame):
             relwidth = width,
             relheight = self.__add_button_height)
 
-        # TODO default project stuff
-        self.__add_entry("f(x) = x^2 + 1")
-        self.__add_entry("a = 3")
-        self.__add_entry("f(x)")
-        self.__add_entry("f(x / a)")
-        self.__add_entry("g(x, y) = sin(x) + cos(y)")
-        self.__add_entry("g(x, y)")
-        self.__add_entry("(x^2+y^2-1)^3-(x^2)*(y^3)=0")
+    def set_settings(self, settings):
+        self.__clear_entries()
+        for k in settings.keys():
+            if isinstance(k, str) and k.startswith(EquationEditor.EQUATION_KEY):
+                self.__add_entry(ast.literal_eval(settings[k]))
+        for e in self.__entries: e.update()
+        self.__update()
+    def add_settings(self, settings):
+        counter = 0
+        for e in self.__entries:
+            settings[EquationEditor.EQUATION_KEY + str(counter)] = str(e.get_settings())
+            counter += 1
 
-    def __add_entry(self, text = None):
-        eq = Equation(self.getInnerFrame(), self.__update, self.__remove_entry)
+    def __add_entry(self, settings = None):
+        eq = Equation(self.getInnerFrame(), self.__update, self.__remove_entry, settings)
+        eq.configure(width = self.__entry_width)
         eq.div = EquationDivider(self.getInnerFrame())
         self.__dividers.append(eq.div)
         self.__entries.append(eq)
-        self.__entries[-1].configure(width = self.__entry_width)
-        if text is not None:
-            self.__entries[-1].force_text(text)
-
+    def __clear_entries(self):
+        for e in self.__entries + self.__dividers:
+            e.pack_forget()
+        self.__entries = []
+        self.__dividers = []
+        self.__update()
     def __remove_entry(self, entry):
         if entry.div is not None:
             entry.div.pack_forget()
             self.__dividers.remove(entry.div)
         self.__entries.remove(entry)
         self.__update(entry)
-
     def __entry_config(self, width):
         self.__entry_width = width
         for e in self.__entries:
             e.set_width(self.__entry_width)
 
-    def __update(self, changed_eq):
+    def __update(self, changed_eq = None):
         parser = Parser.get_instance()
         unbound = [None, parser.get_symbol_y(), parser.get_symbol_z()]
 
-        prior = set([b for b in self.__bindings if b.get_equation() is changed_eq])
-        prior_names = list(map(lambda b : b.get_name(), prior))
-        def unaffected_check(b):
-            symbols = b.get_raw_free_symbols()
-            if not b.get_name() in unbound: symbols.add(b.get_name())
-            no_prior = len(symbols.intersection(prior_names)) == 0
-            return no_prior and not b.get_equation() is changed_eq
-        self.__bindings = [b for b in self.__bindings if unaffected_check(b)]
-        self.__plots = [b for b in self.__plots if unaffected_check(b)]
-        unaffected = [b.get_equation() for b in self.__bindings + self.__plots]
+        if changed_eq is None:
+            self.__bindings = []
+            self.__plots = []
+            unaffected = []
+        else:
+            prior = set([b for b in self.__bindings if b.get_equation() is changed_eq])
+            prior_names = list(map(lambda b : b.get_name(), prior))
+            def unaffected_check(b):
+                symbols = b.get_raw_free_symbols()
+                if not b.get_name() in unbound: symbols.add(b.get_name())
+                no_prior = len(symbols.intersection(prior_names)) == 0
+                return no_prior and not b.get_equation() is changed_eq
+            self.__bindings = [b for b in self.__bindings if unaffected_check(b)]
+            self.__plots = [b for b in self.__plots if unaffected_check(b)]
+            unaffected = [b.get_equation() for b in self.__bindings + self.__plots]
 
         def rm_dupes(var):
             def _rm_dupes(b, v = var):
