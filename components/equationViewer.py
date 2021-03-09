@@ -13,11 +13,12 @@ class EquationViewer(tk.Frame):
     AZIM_KEY = "view_azim"
     CUBOID_KEY = "view_cuboid"
 
-    def __init__(self, parent, width):
+    def __init__(self, parent, width, change_func):
         super().__init__(parent)
         Theme.get_instance().configure_viewer(self)
 
         self.__width = width
+        self.__change_func = change_func
 
         self.__mode = Dimension.TWO_D
 
@@ -88,6 +89,7 @@ class EquationViewer(tk.Frame):
     def __process_plots(self):
         self.__plots = list(filter(lambda p : isinstance(p.get_plot_type(), PlotType) and \
             PlotType.get_dim(p.get_plot_type()) is self.__mode, self.__raw_plots))
+        self.__change_func()
     def plot(self, plots):
         self.__raw_plots = plots
         self.__process_plots()
@@ -98,7 +100,9 @@ class EquationViewer(tk.Frame):
 
     def drag_start(self, e):
         self.__drag_pos = (e.x, e.y)
+        self.__change_func()
     def drag(self, e, w, h):
+        self.__change_func()
         if self.__mode == Dimension.TWO_D:
             self.__view_rect[0] += (self.__drag_pos[0] - e.x) \
                 * (self.__view_rect[2] / w)
@@ -128,6 +132,7 @@ class EquationViewer(tk.Frame):
             self.__view_cuboid[3] += 2 * sd
             self.__view_cuboid[4] += 2 * sd
             self.__view_cuboid[5] += 2 * sd
+        self.__change_func()
         return self.get_lims()
 
     def get_lims(self):

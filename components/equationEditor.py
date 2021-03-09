@@ -20,13 +20,14 @@ class EquationEditor(ScrollableFrame):
 
     EQUATION_KEY = "eq"
 
-    def __init__(self, parent, width, plotter):
+    def __init__(self, parent, width, plotter, change_func):
         super().__init__(parent, self.__entry_config)
         Theme.get_instance().configure_editor(self)
         Theme.get_instance().configure_editor(self.getCanvas())
         Theme.get_instance().configure_editor(self.getInnerFrame())
 
         self.__plotter = plotter
+        self.__change_func = change_func
 
         self.__entry_width = None
         self.__entries = []
@@ -37,12 +38,12 @@ class EquationEditor(ScrollableFrame):
 
         self.__add_button_height = 0.05
 
-        self.place(relwidth = width,
-            relheight = 1 - self.__add_button_height)
+        self.place(relwidth = width, relheight = 1 - self.__add_button_height)
 
-        self.__entry_button = tk.Button(parent,
-            text = "+",
-            command = self.__add_entry)
+        def entry_command():
+            self.__add_entry()
+            self.__update(self.__entries[-1])
+        self.__entry_button = tk.Button(parent, text = "+", command = entry_command)
         Theme.get_instance().configure_editor_button(self.__entry_button)
         FontManager.get_instance().configure_text(self.__entry_button)
         self.__entry_button.place(
@@ -56,7 +57,7 @@ class EquationEditor(ScrollableFrame):
             if isinstance(k, str) and k.startswith(EquationEditor.EQUATION_KEY):
                 self.__add_entry(ast.literal_eval(settings[k]))
         for e in self.__entries: e.update()
-        self.__update()
+        self.__update(no_change = True)
     def add_settings(self, settings):
         counter = 0
         for e in self.__entries:
@@ -86,7 +87,7 @@ class EquationEditor(ScrollableFrame):
         for e in self.__entries:
             e.set_width(self.__entry_width)
 
-    def __update(self, changed_eq = None):
+    def __update(self, changed_eq = None, no_change = False):
         parser = Parser.get_instance()
         unbound = [None, parser.get_symbol_y(), parser.get_symbol_z()]
 
@@ -182,3 +183,4 @@ class EquationEditor(ScrollableFrame):
         for e in self.__entries:
             e.set_plottable(e in plot_entries)
         self.__plotter(list(filter(lambda p : not p.get_equation().is_hidden(), self.__plots)))
+        if not no_change: self.__change_func()

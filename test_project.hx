@@ -1,7 +1,7 @@
-view_dimension:3
-view_rect:-9.304958068656251 -8.02947369242857 23.246423442 23.246423442
-view_elev:7.25
-view_azim:-19.040000000000028
+view_dimension:2
+view_rect:-8.96443428776758 -7.830218634354285 23.246423442 23.246423442
+view_elev:8.125
+view_azim:-63.84000000000003
 view_cuboid:-11.0 -11.0 -11.0 22.0 22.0 22.0
 eq0:{'text': 'f(x) = x^2 + 1', 'colour': '224 82 99', 'locked': 0, 'hidden': 0, 'contoured': 0}
 eq1:{'text': 'a = 3', 'colour': '3 247 235', 'locked': 0, 'hidden': 0, 'contoured': 0}

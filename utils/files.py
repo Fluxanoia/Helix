@@ -21,6 +21,7 @@ class FileManager:
             raise Exception("Invalid initialistion of FileManager.")
         else:
             FileManager.__instance = self
+            self.__current_path = None
 
     def __mkdirs(self, path):
         os.makedirs(os.path.dirname(path), exist_ok = True)
@@ -60,6 +61,8 @@ class FileManager:
             for (x, y) in content.items():
                 file.write(str(x) + FileManager.DELIM + str(y) + "\n")
 
+    def new_project(self):
+        self.__current_path = None
     def load_project(self, default_settings = None):
         path = filedialog.askopenfilename(title = "Loading a Project",
             filetypes = [("Helix Project Files", "*" + FileManager.PROJECT_EXT)],
@@ -72,16 +75,31 @@ class FileManager:
         except Exception as e:
             showinfo("Helix Graphing Tool - Project Open Error",
                 "Could not open the requested project:\n" + str(e))
+        self.__current_path = path
         return data
-    def save_project(self, settings):
-        path = filedialog.asksaveasfilename(title = "Saving the Project",
-            filetypes = [("Helix Project Files", "*" + FileManager.PROJECT_EXT)],
-            defaultextension = FileManager.PROJECT_EXT)
+    def save_project(self, settings, save_as):
+        if save_as or self.__current_path is None:
+            path = filedialog.asksaveasfilename(title = "Saving the Project",
+                filetypes = [("Helix Project Files", "*" + FileManager.PROJECT_EXT)],
+                defaultextension = FileManager.PROJECT_EXT)
+        else:
+            path = self.__current_path
         try:
             self.__overwrite_file(path, settings)
         except Exception as e:
             showinfo("Helix Graphing Tool - Project Save Error",
                 "Could not save the project:\n" + str(e))
+            return None
+        if not save_as and self.__current_path is None:
+            self.__current_path = path
+            return True
+        return self.__current_path != path
+
+    def get_current_project_name(self):
+        return None if self.__current_path is None else \
+            self.__get_project_name(self.__current_path)
+    def __get_project_name(self, path):
+        return os.path.splitext(os.path.basename(path))[0]
 
     @staticmethod
     def get_files_path(*args):
