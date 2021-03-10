@@ -173,11 +173,14 @@ class EquationEditor(ScrollableFrame):
 
         for p in self.__plots:
             fv = p.get_free_symbols()
-            if len(fv) == 0:
-                p.label(str(p))
-            else:
+            if len(fv) > 0:
                 p.label("Unbound: " + str(fv))
-        self.__plots = list(filter(lambda p : len(p.get_free_symbols()) == 0, self.__plots))
+            elif not p.is_valid():
+                p.label("Invalid atoms.")
+            else:
+                p.label(str(p))
+        self.__plots = list(filter(lambda p : p.is_valid() \
+            and len(p.get_free_symbols()) == 0, self.__plots))
 
         plot_entries = list(map(lambda p : p.get_equation(), self.__plots))
         for e in self.__entries:

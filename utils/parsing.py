@@ -2,7 +2,8 @@ import copy
 
 import numpy as np
 import sympy as sy
-from sympy.core.function import UndefinedFunction, AppliedUndef
+from sympy.integrals import Integral
+from sympy.core.function import UndefinedFunction, AppliedUndef, Derivative
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.parsing.sympy_parser import standard_transformations, \
     function_exponentiation, convert_xor, convert_equals_signs
@@ -28,23 +29,37 @@ class Parser:
             raise Exception("Invalid initialistion of Parser.")
         Parser.__instance = self
         self.__x, self.__y, self.__z = sy.symbols('x y z')
-        e, pi = sy.symbols('e pi')
-        self.__def_bindings = [(e, np.exp(1)), (pi, np.pi)]
         self.__transformations = standard_transformations \
             + (function_exponentiation, convert_xor, convert_equals_signs)
-        self.__global_dict = {}
 
+        self.__global_dict = {}
         exec_('from sympy.core import *', self.__global_dict)
         exec_('from sympy.functions import *', self.__global_dict)
-        exclusions = ['sympify', 'SympifyError', 'cacheit',
-            'assumptions', 'check_assumptions', 'failing_assumptions',
-            'common_assumptions', 'vectorize','Subs', 'expand',
-            'PoleError', 'count_ops', 'expand_mul', 'expand_log',
-            'expand_func', 'expand_trig', 'expand_complex',
-            'expand_multinomial', 'nfloat', 'expand_power_base',
-            'expand_power_exp', 'arity', 'PrecisionExhausted', 'N',
-            'evalf', 'Dict', 'gcd_terms', 'factor_terms', 'factor_nc', 'evaluate']
+        exec_('from sympy.integrals import *', self.__global_dict)
+        exclusions = ['sympify', 'SympifyError', 'Subs', 'evalf', 'evaluate']
         for e in exclusions: self.__global_dict.pop(e)
+
+        self.__invalid_atoms = (Derivative, Integral)
+
+        e, pi = sy.symbols('e pi')
+        self.__default_subs = [(e, np.exp(1)), (pi, np.pi)]
+        self.__default_repl = [
+            (lambda e : isinstance(e, sy.Function) and e.name == 'int',
+                lambda e : Integral(*e.args)),
+            (lambda x : isinstance(x, (Derivative, Integral)),
+                lambda e : e.doit())]
+
+    def default_binds(self, expr):
+        try:
+            expr = expr.subs(self.__default_subs)
+            for (f, t) in self.__default_repl:
+                expr = expr.replace(f, t)
+        except Exception as e:
+            return str(e)
+        return expr
+        
+    def has_invalid_atoms(self, expr):
+        return len(expr.atoms(*self.__invalid_atoms)) > 0
 
     def args(self, raw_expr):
         def _args(expr):
@@ -84,8 +99,6 @@ class Parser:
         return self.__z
     def get_default_symbols(self):
         return [self.__x, self.__y]
-    def get_default_bindings(self):
-        return self.__def_bindings
 
 class Binding:
 
@@ -114,6 +127,16 @@ class Binding:
         except Exception as e:
             return str(e)
         return None
+
+    def default_binds(self):
+        db = Parser.get_instance().default_binds(self.__body)
+        if not isinstance(db, str):
+            self.__body = db
+            return None
+        return db
+        
+    def is_valid(self):
+        return not Parser.get_instance().has_invalid_atoms(self.__body)
 
     def label(self, text):
         self.__equation.label(text)
@@ -186,6 +209,8 @@ class Parsed:
         self.__error = None
 
         self.__eval(raw)
+        if not self.__raw_binding is None and self.__raw_error is None:
+            self.__raw_error = self.__raw_binding.default_binds()
         self.reset()
 
     def __eval(self, raw):
