@@ -57,7 +57,7 @@ class Parser:
         except Exception as e:
             return str(e)
         return expr
-        
+
     def has_invalid_atoms(self, expr):
         return len(expr.atoms(*self.__invalid_atoms)) > 0
 
@@ -89,7 +89,8 @@ class Parser:
 
     def parse(self, expr):
         return parse_expr(expr, global_dict = self.__global_dict,
-            transformations = self.__transformations)
+            transformations = self.__transformations,
+            evaluate = False)
 
     def get_symbol_x(self):
         return self.__x
@@ -134,7 +135,7 @@ class Binding:
             self.__body = db
             return None
         return db
-        
+
     def is_valid(self):
         return not Parser.get_instance().has_invalid_atoms(self.__body)
 
@@ -296,6 +297,14 @@ class Parsed:
                             self.__raw_error = "Duplicate parameters."
                 else:
                     self.__raw_error = "Multiple definitions."
+            elif parser.get_symbol_z() in fv:
+                try:
+                    self.__bind(parser.get_symbol_z(), sy.solve(
+                        sy.Eq(self.__raw_args[0], self.__raw_args[1]),
+                        parser.get_symbol_z(), domain = sy.S.Reals),
+                        PlotType.SURFACE)
+                except Exception as e:
+                    self.__raw_error = str(e)
             elif parser.get_symbol_y() in xy:
                 try:
                     self.__bind(None, sy.Eq(self.__raw_args[0], self.__raw_args[1]),
