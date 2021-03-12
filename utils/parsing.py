@@ -44,7 +44,7 @@ class Parser:
         e, pi = sy.symbols('e pi')
         self.__default_subs = [(e, np.exp(1)), (pi, np.pi)]
         self.__default_repl = [
-            (lambda e : isinstance(e, sy.Function) and e.name == 'int',
+            (lambda e : isinstance(e, sy.Function) and hasattr(e, 'name') and e.name == 'int',
                 lambda e : Integral(*e.args)),
             (lambda x : isinstance(x, (Derivative, Integral)),
                 lambda e : e.doit())]

@@ -111,17 +111,16 @@ class HelixSeries(ABC):
                     y = np.concatenate((self._data[1], y), axis = 0)
                     z = ma.concatenate((self._data[2], z), axis = 0)
             self._data = (x, y, z)
-    def _get_mesh(self, xlim, ylim):
-        x1, x2 = (0, len(self._data[0][0]) - 1)
-        y1, y2 = (0, len(self._data[1]) - 1)
-        while self._data[0][0][x1] < xlim[0]: x1 += 1
-        while self._data[0][0][x2] >= xlim[1]: x2 -= 1
-        while self._data[1][y1][0] < ylim[0]: y1 += 1
-        while self._data[1][y2][0] >= ylim[1]: y2 -= 1
-        x2 += 1
-        y2 += 1
-        return (self._data[0][y1:y2, x1:x2], self._data[1][y1:y2, x1:x2],
-            self._data[2][y1:y2, x1:x2])
+    def _get_mesh(self, xlim, ylim, zlim):
+        (x, y, z) = self._data
+        diff = (zlim[1] - zlim[0]) / 5
+        cond = (y >= ylim[0]) & (y <= ylim[1]) \
+            & (x >= xlim[0]) & (x <= xlim[1]) \
+            & (z >= zlim[0] - diff) & (z <= zlim[1] + diff)
+        x = np.where(cond, x, np.nan)
+        y = np.where(cond, y, np.nan)
+        z = np.where(cond, z, np.nan)
+        return (x, y, z)
 
     @staticmethod
     def generate_series(plot):
@@ -231,9 +230,9 @@ class SurfacePlot(HelixSeries):
     def draw(self, axis, xlim, ylim, zlim):
         self._expand_data(xlim, ylim, zlim)
         if self._plot.get_equation().is_contoured():
-            axis.contour(*self._get_mesh(xlim, ylim), colors = [self._plot.get_colour()])
+            axis.contour(*self._get_mesh(xlim, ylim, zlim), colors = [self._plot.get_colour()])
         else:
-            axis.plot_surface(*self._get_mesh(xlim, ylim), color = self._plot.get_colour(),
+            axis.plot_surface(*self._get_mesh(xlim, ylim, zlim), color = self._plot.get_colour(),
                 rstride = 1, cstride = 1, linewidth = 0.1)
 
 class Parametric3DLinePlot(HelixSeries):
