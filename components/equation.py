@@ -31,7 +31,7 @@ class Equation(tk.Frame):
         self.div = None
 
         self.__plottable = False
-        self.__parsed = None
+        self.__parsed = Parsed("")
 
         self.__button_size = 24
         self.__frame_pad = 8

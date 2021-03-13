@@ -9,6 +9,15 @@ from utils.fonts import FontManager
 from components.equation import Equation
 from components.scrollableFrame import ScrollableFrame
 
+class EditorError(Exception):
+
+    def __init__(self, m):
+        self.__message = m
+        super().__init__(self.__str__())
+
+    def __str__(self):
+        return str(self.__message)
+
 class EquationDivider(tk.Frame):
 
     def __init__(self, parent):
@@ -23,8 +32,8 @@ class EquationEditor(ScrollableFrame):
     def __init__(self, parent, width, plotter, change_func):
         super().__init__(parent, self.__entry_config)
         Theme.get_instance().configure_editor(self)
-        Theme.get_instance().configure_editor(self.getCanvas())
-        Theme.get_instance().configure_editor(self.getInnerFrame())
+        Theme.get_instance().configure_editor(self.get_canvas())
+        Theme.get_instance().configure_editor(self.get_inner_frame())
 
         self.__plotter = plotter
         self.__change_func = change_func
@@ -65,9 +74,9 @@ class EquationEditor(ScrollableFrame):
             counter += 1
 
     def __add_entry(self, settings = None):
-        eq = Equation(self.getInnerFrame(), self.__update, self.__remove_entry, settings)
+        eq = Equation(self.get_inner_frame(), self.__update, self.__remove_entry, settings)
         eq.configure(width = self.__entry_width)
-        eq.div = EquationDivider(self.getInnerFrame())
+        eq.div = EquationDivider(self.get_inner_frame())
         self.__dividers.append(eq.div)
         self.__entries.append(eq)
     def __clear_entries(self):
@@ -88,8 +97,7 @@ class EquationEditor(ScrollableFrame):
             e.set_width(self.__entry_width)
 
     def __update(self, changed_eq = None, no_change = False):
-        parser = Parser.get_instance()
-        unbound = [None, parser.get_symbol_y(), parser.get_symbol_z()]
+        unbound = [None, Parser.X, Parser.Y, Parser.Z]
 
         if changed_eq is None:
             self.__bindings = []
@@ -99,10 +107,10 @@ class EquationEditor(ScrollableFrame):
             prior = set([b for b in self.__bindings if b.get_equation() is changed_eq])
             prior_names = list(map(lambda b : b.get_name(), prior))
             def unaffected_check(b):
-                symbols = b.get_raw_free_symbols()
+                if b.get_equation() is changed_eq: return False
+                symbols = b.get_free_symbols(True)
                 if not b.get_name() in unbound: symbols.add(b.get_name())
-                no_prior = len(symbols.intersection(prior_names)) == 0
-                return no_prior and not b.get_equation() is changed_eq
+                return len(symbols.intersection(prior_names)) == 0
             self.__bindings = [b for b in self.__bindings if unaffected_check(b)]
             self.__plots = [b for b in self.__plots if unaffected_check(b)]
             unaffected = [b.get_equation() for b in self.__bindings + self.__plots]
@@ -118,9 +126,6 @@ class EquationEditor(ScrollableFrame):
         for e in self.__entries:
             p = e.get_parsed()
             if e in unaffected:
-                continue
-            elif p is None:
-                e.label("Empty.")
                 continue
             p.reset()
             if p.has_error():
@@ -142,7 +147,7 @@ class EquationEditor(ScrollableFrame):
                         else:
                             bound.append(bind.get_name())
             else:
-                raise ValueError("Unhandled Parsed state.")
+                raise EditorError("Unhandled Parsed state.")
 
         used = []
         while len(used) < len(self.__bindings):
@@ -152,23 +157,24 @@ class EquationEditor(ScrollableFrame):
             if len(to_subst) == 0:
                 break
             for sub in to_subst:
-                rm = []
-                for bind in self.__bindings + self.__plots:
-                    err = None
-                    if sub.binds_func():
-                        err = bind.replace(sub.get_name(), sub.get_body())
-                    elif sub.binds_var():
-                        err = bind.subs([(sub.get_name(), sub.get_body())])
-                    else:
-                        raise ValueError("Unexpected binding type.")
-                    if err is not None:
-                        bind.label(err)
-                        rm.append(bind)
-                self.__bindings = list(filter(lambda b : not b in rm, self.__bindings))
-                self.__plots = list(filter(lambda b : not b in rm, self.__plots))
+                subst = [(sub.get_name(), sub.get_body())]
+                for bind in list(self.__bindings + self.__plots):
+                    if sub == bind: continue
+                    try:
+                        if sub.binds_func():
+                            bind.replace(subst)
+                        elif sub.binds_var():
+                            bind.subs(subst)
+                        else:
+                            raise EditorError("Unexpected binding type.")
+                        if len(bind.get_free_symbols()) == 0: bind.default_ops()
+                    except Exception as e:
+                        bind.label(str(e))
+                        if bind in self.__bindings: self.__bindings.remove(bind)
+                        if bind in self.__plots: self.__plots.remove(bind)
 
-        for b in [b for b in self.__bindings if not b in used]:
-            b.label("Unresolvable.")
+        for b in self.__bindings:
+            if not b in used: b.label("Unresolvable.")
         self.__bindings = used
 
         for p in self.__plots:

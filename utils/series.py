@@ -197,9 +197,8 @@ class Implicit2DPlot(HelixSeries):
         elif isinstance(expr, (Equality, GreaterThan, LessThan)):
             has_equality = True
 
-        parser = Parser.get_instance()
-        x = (parser.get_symbol_x(), -10, 10)
-        y = (parser.get_symbol_y(), -10, 10)
+        x = (Parser.X, -10, 10)
+        y = (Parser.Y, -10, 10)
         self._series = ImplicitSeries(expr, x, y, has_equality,
             True, 0, 300, self._plot.get_colour())
 
