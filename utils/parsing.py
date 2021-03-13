@@ -323,7 +323,7 @@ class Parsed:
                 sol = sy.solve(sy.Eq(larg, rarg), Parser.Z, domain = sy.S.Reals)
                 if isinstance(sol, (list, tuple)):
                     if len(sol) == 0:
-                        raise ParsingError("No solutions.")
+                        raise ParsingError("Parsed.eval_bind", "No solutions.")
                     elif len(sol) == 1:
                         self.__bind(Parser.Z, sol[0], PlotType.SURFACE)
                     else:
