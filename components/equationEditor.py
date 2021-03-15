@@ -6,7 +6,7 @@ from utils.theme import Theme
 from utils.parsing import Parser
 from utils.fonts import FontManager
 
-from components.equation import Equation
+from components.equation import Equation, EquationLabelType
 from components.scrollableFrame import ScrollableFrame
 
 class EditorError(Exception):
@@ -109,7 +109,9 @@ class EquationEditor(ScrollableFrame):
             def unaffected_check(b):
                 if b.get_equation() is changed_eq: return False
                 symbols = b.get_free_symbols(True)
-                if not b.get_name() in unbound: symbols.add(b.get_name())
+                name = b.get_name()
+                if not name in unbound and not isinstance(name, tuple):
+                    symbols.add(name)
                 return len(symbols.intersection(prior_names)) == 0
             self.__bindings = [b for b in self.__bindings if unaffected_check(b)]
             self.__plots = [b for b in self.__plots if unaffected_check(b)]
@@ -118,7 +120,7 @@ class EquationEditor(ScrollableFrame):
         def rm_dupes(var):
             def _rm_dupes(b, v = var):
                 rm = b.get_name() == v
-                if rm: b.get_equation().label("Multiple definitions.")
+                if rm: b.get_equation().label(EquationLabelType.ERROR, "Multiple definitions.")
                 return rm
             return _rm_dupes
 
@@ -129,14 +131,14 @@ class EquationEditor(ScrollableFrame):
                 continue
             p.reset()
             if p.has_error():
-                e.label(p.get_error())
+                e.label(EquationLabelType.ERROR, p.get_error())
             elif p.has_binding():
                 bind = p.get_binding()
                 if bind.get_name() is None and bind.get_plot_type() is None:
-                    e.label(str(bind.get_body()))
+                    e.label(EquationLabelType.VALUE, str(bind.get_body()))
                 else:
-                    e.label(str(bind))
-                    if bind.get_name() in unbound:
+                    e.label(EquationLabelType.VALUE, str(bind))
+                    if bind.get_name() in unbound or isinstance(bind.get_name(), tuple):
                         self.__plots.append(bind)
                     else:
                         self.__bindings.append(bind)
@@ -169,27 +171,27 @@ class EquationEditor(ScrollableFrame):
                             raise EditorError("Unexpected binding type.")
                         if len(bind.get_free_symbols()) == 0: bind.default_ops()
                     except Exception as e:
-                        bind.label(str(e))
+                        bind.label(EquationLabelType.ERROR, str(e))
                         if bind in self.__bindings: self.__bindings.remove(bind)
                         if bind in self.__plots: self.__plots.remove(bind)
 
         for b in self.__bindings:
-            if not b in used: b.label("Unresolvable.")
+            if not b in used: b.label(EquationLabelType.ERROR, "Unresolvable.")
         self.__bindings = used
 
         for p in self.__plots:
             fv = p.get_free_symbols()
             if len(fv) > 0:
-                p.label("Unbound: " + str(fv))
+                p.label(EquationLabelType.ERROR, "Unbound: " + str(fv))
             elif not p.is_valid():
-                p.label("Invalid atoms.")
+                p.label(EquationLabelType.ERROR, "Invalid atoms.")
             else:
-                p.label(str(p))
+                p.label(EquationLabelType.VALUE, str(p))
         self.__plots = list(filter(lambda p : p.is_valid() \
             and len(p.get_free_symbols()) == 0, self.__plots))
 
         plot_entries = list(map(lambda p : p.get_equation(), self.__plots))
         for e in self.__entries:
-            e.set_plottable(e in plot_entries)
+            e.set_state(e in plot_entries)
         self.__plotter(list(filter(lambda p : not p.get_equation().is_hidden(), self.__plots)))
         if not no_change: self.__change_func()

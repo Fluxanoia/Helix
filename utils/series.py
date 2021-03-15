@@ -113,10 +113,15 @@ class HelixSeries(ABC):
             self._data = (x, y, z)
     def _get_mesh(self, xlim, ylim, zlim):
         (x, y, z) = self._data
+
+        xi = [i for i, v in enumerate(x[0]) if v >= xlim[0] and v <= xlim[1]]
+        yi = [i for i, v in enumerate(y) if v[0] >= ylim[0] and v[0] <= ylim[1]]
+        x = x[yi[0]:yi[-1], xi[0]:xi[-1]]
+        y = y[yi[0]:yi[-1], xi[0]:xi[-1]]
+        z = z[yi[0]:yi[-1], xi[0]:xi[-1]]
+
         diff = (zlim[1] - zlim[0]) / 5
-        cond = (y >= ylim[0]) & (y <= ylim[1]) \
-            & (x >= xlim[0]) & (x <= xlim[1]) \
-            & (z >= zlim[0] - diff) & (z <= zlim[1] + diff)
+        cond = (z >= zlim[0] - diff) & (z <= zlim[1] + diff)
         x = np.where(cond, x, np.nan)
         y = np.where(cond, y, np.nan)
         z = np.where(cond, z, np.nan)
@@ -161,7 +166,6 @@ class Parametric2DPlot(HelixSeries):
 
     def __init__(self, plot):
         super().__init__(plot)
-        # TODO parametric, body should = (expr1, expr2)
         self._series = Parametric2DLineSeries(*(check_arguments(self._plot.get_body(), 2, 1)[0]))
 
     def draw(self, axis, xlim, ylim, zlim):
@@ -238,9 +242,7 @@ class Parametric3DLinePlot(HelixSeries):
 
     def __init__(self, plot):
         super().__init__(plot)
-        # TODO parametric, body should be (expr1, expr2, expr3)
-        check = check_arguments(self._plot.get_body(), 3, 1)[0]
-        self._series = Parametric3DLineSeries(*check)
+        self._series = Parametric3DLineSeries(*check_arguments(self._plot.get_body(), 3, 1)[0])
 
     def draw(self, axis, xlim, ylim, zlim):
         # TODO parametric, fix range
@@ -253,9 +255,7 @@ class ParametricSurfacePlot(HelixSeries):
 
     def __init__(self, plot):
         super().__init__(plot)
-        # TODO parametric, body should be (expr1, expr2, expr3)
-        check = check_arguments(self._plot.get_body(), 3, 2)[0]
-        self._series = ParametricSurfaceSeries(*check)
+        self._series = ParametricSurfaceSeries(*check_arguments(self._plot.get_body(), 3, 2)[0])
 
     def draw(self, axis, xlim, ylim, zlim):
         # TODO parametric, fix range

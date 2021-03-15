@@ -1,3 +1,5 @@
+import enum
+
 import tkinter as tk
 
 from utils.fonts import FontManager
@@ -6,6 +8,13 @@ from utils.parsing import Parsed
 from utils.delay import DelayTracker
 from utils.theme import Theme
 from utils.maths import PlotType
+
+from components.tooltip import Tooltip
+
+class EquationLabelType(enum.Enum):
+    NONE = 0,
+    VALUE = 1,
+    ERROR = 2
 
 class Equation(tk.Frame):
 
@@ -33,13 +42,16 @@ class Equation(tk.Frame):
         self.__plottable = False
         self.__parsed = Parsed("")
 
+        self.__min_height = 28
         self.__button_size = 24
+        self.__button_count = 0
         self.__frame_pad = 8
         self.__spacing = 8
 
-        self.__inner = tk.Frame(self, bg = Theme.get_instance().get_editor_body_colour(),
-            padx = self.__frame_pad, pady = self.__frame_pad,
-            height = self.__frame_pad * 2 + 170)
+        theme = Theme.get_instance()
+
+        self.__inner = tk.Frame(self, bg = theme.get_editor_body_colour(),
+            padx = self.__frame_pad, pady = self.__frame_pad)
         self.__inner.pack(anchor = tk.CENTER, fill = tk.BOTH, expand = True)
 
         self.__entry_var = tk.StringVar()
@@ -51,19 +63,24 @@ class Equation(tk.Frame):
             w = -(self.__button_size + self.__spacing),
             relwidth = 1)
 
-        self.__readout_wrapper = tk.Frame(self.__inner)
-        self.__readout = tk.Text(self.__readout_wrapper)
-        FontManager.get_instance().configure_text(self.__readout)
-        Theme.get_instance().configure_editor_readout(self.__readout)
-        self.__readout.config(state = tk.DISABLED)
-        self.__readout.pack(fill = tk.BOTH, expand = True)
-        self.__readout_wrapper.place(x = self.__button_size + self.__spacing,
-            y = self.__spacing,
-            w = -(self.__button_size + self.__spacing),
-            h = -self.__spacing,
-            rely = 0.2,
-            relwidth = 1,
-            relheight = 0.8)
+        self.__content_wrapper = tk.Frame(self.__inner,
+            bg = theme.get_editor_body_colour())
+
+        self.__readout_active = False
+        self.__readout_height = 32
+        self.__readout_type = EquationLabelType.NONE
+        self.__readout = tk.Label(self.__content_wrapper,
+            bg = theme.get_editor_body_colour(),
+            image = ImageManager.get_instance().get_image(
+                "info.png",
+                self.__readout_height,
+                self.__readout_height))
+        self.__readout_tooltip = Tooltip(self.__readout)
+
+        self.__content_wrapper.place(x = self.__button_size + self.__spacing,
+            y = self.__min_height + self.__spacing,
+            w = -(self.__button_size + self.__spacing), h = -(self.__min_height + self.__spacing),
+            relwidth = 1, relheight = 1)
 
         self.__colour_window_open = False
         self.__colour_window_active = True
@@ -198,27 +215,6 @@ class Equation(tk.Frame):
         settings[Equation.CONTOUR_KEY] = int(self.__contoured)
         return settings
 
-    def __place_buttons(self):
-        buttons = []
-        if self.__plottable:
-            buttons.append(self.__colour_button)
-            buttons.append(self.__hide_button)
-        else:
-            self.__colour_button.place_forget()
-            self.__hide_button.place_forget()
-            if self.__colour_window_open:
-                self.__colour_window_open = False
-                self.__colour_window.place_forget()
-        buttons.append(self.__lock_button)
-        if self.__plottable and self.get_parsed().get_binding().get_plot_type() in \
-            [PlotType.SURFACE, PlotType.PARAMETRIC_SURFACE]:
-            buttons.append(self.__contour_button)
-        else:
-            self.__contour_button.place_forget()
-        buttons.append(self.__remove_button)
-        for i in range(len(buttons)):
-            buttons[i].place(y = (self.__button_size + self.__spacing) * i,
-                w = self.__button_size, h = self.__button_size)
     def __debounce_update(self, *_args):
         if self.__debounce_id is not None:
             DelayTracker.get_instance().end_delay(self, self.__debounce_id)
@@ -240,15 +236,60 @@ class Equation(tk.Frame):
     def force_text(self, text):
         self.__entry.delete(0, tk.END)
         self.__entry.insert(0, text)
-    def label(self, text):
-        self.__readout.config(state = tk.NORMAL)
-        self.__readout.delete(1.0, tk.END)
-        self.__readout.insert(tk.END, text)
-        self.__readout.config(state = tk.DISABLED)
+    def label(self, t, text):
+        self.__readout_type = t
+        self.__readout_tooltip.set_text(text)
 
-    def set_plottable(self, b):
-        self.__plottable = b
+    def __place_buttons(self):
+        buttons = []
+        if self.__plottable:
+            buttons.append(self.__colour_button)
+            buttons.append(self.__hide_button)
+        else:
+            self.__colour_button.place_forget()
+            self.__hide_button.place_forget()
+            if self.__colour_window_open:
+                self.__colour_window_open = False
+                self.__colour_window.place_forget()
+        buttons.append(self.__lock_button)
+        if self.__plottable and self.get_parsed().get_binding().get_plot_type() in \
+            [PlotType.SURFACE, PlotType.PARAMETRIC_SURFACE]:
+            buttons.append(self.__contour_button)
+        else:
+            self.__contour_button.place_forget()
+        buttons.append(self.__remove_button)
+        self.__button_count = len(buttons)
+        for i in range(self.__button_count):
+            buttons[i].place(y = (self.__button_size + self.__spacing) * i,
+                w = self.__button_size, h = self.__button_size)
+    def __place_content(self):
+        if self.__readout_active:
+            self.__readout.pack(fill = tk.BOTH, expand = True)
+        else:
+            self.__readout.pack_forget()
+    def __set_height(self):
+        buttons = (self.__button_size + self.__spacing) * self.__button_count - self.__spacing
+        content = 0
+        if self.__readout_active: content += self.__readout_height
+        h = max(self.__min_height + self.__spacing + content, buttons)
+        self.__inner.configure(height = self.__frame_pad * 2 + h)
+    def set_state(self, plottable):
+        self.__plottable = plottable
+
+        self.__readout_active = self.__readout_type is not EquationLabelType.NONE
+        if self.__readout_active:
+            path = ""
+            if self.__readout_type is EquationLabelType.VALUE: path = "info"
+            if self.__readout_type is EquationLabelType.ERROR: path = "error"
+            self.__readout.configure(image = ImageManager.get_instance().get_image(
+                    path + ".png",
+                    self.__readout_height,
+                    self.__readout_height))
+
         self.__place_buttons()
+        self.__place_content()
+        self.__set_height()
+
     def is_plottable(self):
         return self.__plottable
     def is_hidden(self):

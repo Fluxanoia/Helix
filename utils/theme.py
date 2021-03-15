@@ -28,6 +28,9 @@ class Theme:
         self.__viewer_face  = '#202020'
         self.__viewer_spine = '#FFFFFF'
 
+        self.__tooltip_body = '#404040'
+        self.__tooltip_text = '#FFFFFF'
+
         self.__plot_colours = [(224, 82, 99), (3, 247, 235), (100, 87, 166),
             (99, 193, 50), (249, 200, 70)]
 
@@ -59,6 +62,9 @@ class Theme:
         w.configure(bg = self.__viewer_button_body, foreground = self.__viewer_text)
     def configure_viewer_text(self, w):
         w.configure(bg = self.__viewer_body, foreground = self.__viewer_text)
+
+    def configure_tooltip_label(self, w):
+        w.configure(bg = self.__tooltip_body, foreground = self.__tooltip_text)
 
     def configure_figure(self, f):
         f.patch.set_facecolor(self.__viewer_face)
