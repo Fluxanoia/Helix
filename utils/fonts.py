@@ -15,9 +15,9 @@ class FontManager:
             raise Exception("Invalid initialistion of FontManager.")
         else:
             FontManager.__instance = self
-            self.__textFont = font.Font(root, size = 16)
+            self.__text_font = font.Font(root, size = 16)
 
     def get_text_font(self):
-        return self.__textFont
+        return self.__text_font
     def configure_text(self, w):
         w.configure(font = self.get_text_font())

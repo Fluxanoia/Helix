@@ -57,10 +57,9 @@ class EquationViewer(tk.Frame):
             command = lambda : self.__mode_switcher(Dimension.TWO_D))
         self.__3d_button = tk.Button(self.__frame, text = "3D",
             command = lambda : self.__mode_switcher(Dimension.THREE_D))
-        Theme.get_instance().configure_viewer_button(self.__2d_button)
-        Theme.get_instance().configure_viewer_button(self.__3d_button)
-        FontManager.get_instance().configure_text(self.__2d_button)
-        FontManager.get_instance().configure_text(self.__3d_button)
+        theme = Theme.get_instance()
+        theme.configure_button(self.__2d_button)
+        theme.configure_button(self.__3d_button)
         size = 40
         self.__2d_button.place(x = 10, y = 10, w = size, h = size)
         self.__3d_button.place(x = 10, y = size + 20, w = size, h = size)

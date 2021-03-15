@@ -4,7 +4,6 @@ import tkinter as tk
 
 from utils.theme import Theme
 from utils.parsing import Parser
-from utils.fonts import FontManager
 
 from components.equation import Equation, EquationLabelType
 from components.scrollableFrame import ScrollableFrame
@@ -22,7 +21,7 @@ class EquationDivider(tk.Frame):
 
     def __init__(self, parent):
         super().__init__(parent, height = 4)
-        Theme.get_instance().configure_editor_divider(self)
+        Theme.get_instance().configure_divider(self)
         self.pack(fill = tk.BOTH, expand = True)
 
 class EquationEditor(ScrollableFrame):
@@ -31,9 +30,10 @@ class EquationEditor(ScrollableFrame):
 
     def __init__(self, parent, width, plotter, change_func):
         super().__init__(parent, self.__entry_config)
-        Theme.get_instance().configure_editor(self)
-        Theme.get_instance().configure_editor(self.get_canvas())
-        Theme.get_instance().configure_editor(self.get_inner_frame())
+        theme = Theme.get_instance()
+        theme.configure_editor(self)
+        theme.configure_editor(self.get_canvas())
+        theme.configure_editor(self.get_inner_frame())
 
         self.__plotter = plotter
         self.__change_func = change_func
@@ -53,8 +53,7 @@ class EquationEditor(ScrollableFrame):
             self.__add_entry()
             self.__update(self.__entries[-1])
         self.__entry_button = tk.Button(parent, text = "+", command = entry_command)
-        Theme.get_instance().configure_editor_button(self.__entry_button)
-        FontManager.get_instance().configure_text(self.__entry_button)
+        theme.configure_button(self.__entry_button)
         self.__entry_button.place(
             rely = 1 - self.__add_button_height,
             relwidth = width,
