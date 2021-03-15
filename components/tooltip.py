@@ -19,9 +19,9 @@ class Tooltip(object):
     def __show(self, _e = None):
         if not self.__window is None:
             self.__hide()
-        x1, y1, x2, y2 = self.__parent.bbox()
-        x1 += self.__parent.winfo_rootx() + 140 + x2
-        y1 += self.__parent.winfo_rooty() + 30 + y2
+        x1, y1, _, _ = self.__parent.bbox()
+        x1 += self.__parent.winfo_rootx() + 48
+        y1 += self.__parent.winfo_rooty() + 48
         self.__window = tk.Toplevel(self.__parent)
         self.__window.wm_overrideredirect(1)
         self.__window.wm_geometry("+%d+%d" % (x1, y1))
