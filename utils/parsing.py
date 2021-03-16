@@ -83,8 +83,10 @@ class Parser:
             (lambda x : isinstance(x, (Derivative, Integral)), lambda e : e.doit())]
         self.__invalid_atoms = (Derivative, Integral)
 
+    def is_reserved(self, name):
+        return str(name) in Parser.RESERVED_SYMBOLS
     def is_defined(self, name):
-        return str(name) in Parser.RESERVED_SYMBOLS or str(name) in self.__global_dict
+        return self.is_reserved(name) or str(name) in self.__global_dict
 
     def subs(self, expr, sb = None):
         if isinstance(expr, (tuple, Tuple)):
@@ -389,10 +391,10 @@ class Parsed:
                 if len(parser.get_symbols(func, Parser.FILTER_RESERVED)) > 0:
                     raise ParsingError("Parsed.eval_bind", "Cannot map to reserved variables.")
                 self.__bind(sy.Function(larg_name), func, None)
-            elif isinstance(larg, Parser.VAR_TYPES):
+            elif isinstance(larg, Parser.VAR_TYPES) and not parser.is_reserved(larg):
                 if parser.is_defined(larg_name):
                     raise ParsingError("Parsed.eval_bind",
-                        "Variable name already defined or reserved.")
+                        "Variable name already defined.")
                 if len(parser.get_symbols(rarg, Parser.FILTER_RESERVED)) > 0:
                     raise ParsingError("Parsed.eval_bind", "Cannot map to reserved variables.")
                 self.__bind(larg, rarg, None)
@@ -411,7 +413,12 @@ class Parsed:
             elif Parser.Y in xyz:
                 sol = sy.solve(sy.Eq(larg, rarg), Parser.Y, domain = sy.S.Reals)
                 if isinstance(sol, (list, tuple, Tuple)):
-                    self.__bind(None, sy.Eq(larg, rarg), PlotType.IMPLICIT_2D)
+                    if len(sol) == 0:
+                        raise ParsingError("Parsed.eval_bind", "No solutions.")
+                    elif len(sol) == 1:
+                        self.__bind(Parser.Y, sol[0], PlotType.LINE_2D)
+                    else:
+                        self.__bind(None, sy.Eq(larg, rarg), PlotType.IMPLICIT_2D)
                 else:
                     self.__bind(Parser.Y, sol, PlotType.LINE_2D)
             elif Parser.X in xyz:
