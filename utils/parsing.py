@@ -9,6 +9,7 @@ from sympy.parsing.sympy_parser import standard_transformations, \
     function_exponentiation, convert_xor, convert_equals_signs
 from sympy.core.relational import Relational, GreaterThan, LessThan, StrictGreaterThan, \
     StrictLessThan, Equality, Unequality
+from sympy.core.containers import Tuple
 from sympy.logic.boolalg import BooleanFunction
 from sympy.core.compatibility import exec_
 
@@ -31,14 +32,19 @@ class Parser:
     LT = (LessThan, StrictLessThan)
     GT = (GreaterThan, StrictGreaterThan)
 
-    X, Y, Z = sy.symbols('x y z')
-    T, U, V = sy.symbols('t u v')
+    RESERVED_SYMBOLS = ('x', 'y', 'z', 't', 'u', 'v')
+    X, Y, Z, T, U, V = sy.symbols(('x', 'y', 'z', 't', 'u', 'v'))
 
     FILTER_XYZ = lambda s : s in [Parser.X, Parser.Y, Parser.Z]
     FILTER_NOT_XYZ = lambda s : not s in [Parser.X, Parser.Y, Parser.Z]
 
     FILTER_TUV = lambda s : s in [Parser.T, Parser.U, Parser.V]
     FILTER_NOT_TUV = lambda s : not s in [Parser.T, Parser.U, Parser.V]
+
+    FILTER_RESERVED = lambda s : s in [Parser.X, Parser.Y, Parser.Z,
+        Parser.T, Parser.U, Parser.V]
+    FILTER_NOT_RESERVED = lambda s : not s in [Parser.X, Parser.Y, Parser.Z,
+        Parser.T, Parser.U, Parser.V]
 
     VAR_TYPES = (sy.Symbol)
     FUNC_TYPES = (AppliedUndef, UndefinedFunction)
@@ -78,10 +84,10 @@ class Parser:
         self.__invalid_atoms = (Derivative, Integral)
 
     def is_defined(self, name):
-        return str(name) in self.__global_dict
+        return str(name) in Parser.RESERVED_SYMBOLS or str(name) in self.__global_dict
 
     def subs(self, expr, sb = None):
-        if isinstance(expr, tuple):
+        if isinstance(expr, (tuple, Tuple)):
             return tuple(map(lambda e : self.subs(e, sb), expr))
         try:
             expr = expr.subs(self.__default_subs if sb is None else sb)
@@ -89,7 +95,7 @@ class Parser:
             raise ParsingError("Parser.subs", e) from e
         return expr
     def replace(self, expr, rp = None):
-        if isinstance(expr, tuple):
+        if isinstance(expr, (tuple, Tuple)):
             return tuple(map(lambda e : self.replace(e, rp), expr))
         if rp is None: rp = self.__default_repl
         try:
@@ -98,7 +104,7 @@ class Parser:
             raise ParsingError("Parser.replace", e) from e
         return expr
     def transform(self, expr, tr = None):
-        if isinstance(expr, tuple):
+        if isinstance(expr, (tuple, Tuple)):
             return tuple(map(lambda e : self.transform(e, tr), expr))
         if tr is None: tr = self.__default_trans
         try:
@@ -112,7 +118,7 @@ class Parser:
         return expr
 
     def is_valid(self, expr):
-        if isinstance(expr, tuple):
+        if isinstance(expr, (tuple, Tuple)):
             return all(map(self.is_valid, expr))
         return len(expr.atoms(*self.__invalid_atoms)) == 0
 
@@ -127,14 +133,20 @@ class Parser:
         return _args(raw_expr)
     def get_symbols(self, exprs, filter_func = None):
         if not isinstance(exprs, list): exprs = [exprs]
+        def _to_undef(f):
+            if isinstance(f, AppliedUndef):
+                return sy.Function(f.name)
+            return f
         def _add_symbols(e):
             s = set(getattr(e, 'free_symbols', []))
             if hasattr(e, 'atoms'):
-                s = s.union(set(e.atoms(*Parser.FUNC_TYPES)))
+                atoms = e.atoms(*Parser.FUNC_TYPES)
+                atoms = list(map(_to_undef, atoms))
+                s = s.union(set(atoms))
             return s
         symbols = set()
         for expr in exprs:
-            if isinstance(expr, tuple):
+            if isinstance(expr, (tuple, Tuple)):
                 symbols = symbols.union(*map(_add_symbols, expr))
             else:
                 symbols = symbols.union(_add_symbols(expr))
@@ -146,6 +158,15 @@ class Parser:
         return parse_expr(expr, global_dict = self.__global_dict,
             transformations = self.__transformations,
             evaluate = False)
+    def parse_number(self, expr):
+        for t in (list, tuple):
+            if isinstance(expr, t): return t(map(self.parse_number, expr))
+        try:
+            expr = self.parse(expr)
+            expr = expr.evalf()
+            if expr.is_number: return expr
+        except:
+            return None
 
     def get_default_subs(self): return self.__default_subs
     def get_default_repl(self): return self.__default_repl
@@ -161,6 +182,8 @@ class Binding:
         self.__equation = None
         self.__colour = None
 
+        self.__parametric_lims = {}
+
     def label(self, t, text):
         if not self.__equation is None: self.__equation.label(t, text)
 
@@ -168,12 +191,10 @@ class Binding:
         return Parser.get_instance().get_symbols(self.get_body())
     def get_xyz_symbols(self):
         return Parser.get_instance().get_symbols(self.get_body(), Parser.FILTER_XYZ)
+    def get_tuv_symbols(self):
+        return Parser.get_instance().get_symbols(self.get_body(), Parser.FILTER_TUV)
     def get_free_symbols(self, historical = False):
-        if self.__plot_type in PlotType.parametric():
-            f = Parser.FILTER_NOT_TUV
-        else:
-            f = Parser.FILTER_NOT_XYZ
-        fv = Parser.get_instance().get_symbols(self.get_body(), f)
+        fv = Parser.get_instance().get_symbols(self.get_body(), Parser.FILTER_NOT_RESERVED)
         return self.__dependencies.union(fv) if historical else fv
     def get_dependencies(self):
         return self.__dependencies
@@ -199,6 +220,9 @@ class Binding:
         for f in [self.subs, self.replace, self.transform]: f()
 
     def is_valid(self):
+        if self.__plot_type not in PlotType.parametric() \
+            and isinstance(self.__body, (tuple, Tuple)):
+            return False
         return Parser.get_instance().is_valid(self.__body)
 
     def get_name(self):
@@ -216,6 +240,11 @@ class Binding:
         return self.__colour
     def set_colour(self, colour):
         self.__colour = colour
+
+    def get_parametric_limits(self):
+        return self.__parametric_lims
+    def set_parametric_limits(self, pl):
+        self.__parametric_lims = pl
 
     def __str__(self):
         if self.__name is None:
@@ -265,7 +294,7 @@ class Parsed:
         self.__raw_expr = self.__raw
         for f in [parser.parse, parser.subs, parser.replace]:
             self.__raw_expr = f(self.__raw_expr)
-        if isinstance(self.__raw_expr, tuple):
+        if isinstance(self.__raw_expr, (tuple, Tuple)):
             self.__is_parametric = True
             self.__raw_args = self.__raw_expr
             if len(self.__raw_args) > 3:
@@ -281,7 +310,7 @@ class Parsed:
             def _valid_structure(expr, root = False):
                 if isinstance(expr, BooleanFunction): return False
                 if isinstance(expr, Unequality): return False#
-                if isinstance(expr, tuple):
+                if isinstance(expr, (tuple, Tuple)):
                     if root:
                         return all(map(_valid_structure, expr))
                     else:
@@ -305,9 +334,9 @@ class Parsed:
         parser = Parser.get_instance()
         xyz = parser.get_symbols(self.__raw_args, Parser.FILTER_XYZ)
         tuv = parser.get_symbols(self.__raw_args, Parser.FILTER_TUV)
+        if len(xyz) > 0 and len(tuv) > 0:
+            raise ParsingError("Parsed.eval_bind", "(x, y, z) and (t, u, v) shouldn't be mixed.")
         if self.__is_parametric:
-            if len(xyz) > 0:
-                raise ParsingError("Parsed.eval_bind", "x, y, and z are invalid in parametrics.")
             if len(self.__raw_args) == 2:
                 if len(tuv) < 2:
                     self.__bind(tuple(tuv), tuple(self.__raw_args), PlotType.PARAMETRIC_2D)
@@ -336,7 +365,8 @@ class Parsed:
                 if not Parser.Z in xyz:
                     self.__bind(Parser.Z, arg, PlotType.SURFACE)
                 else:
-                    raise ParsingError("Parsed.eval_bind", "Couldn't evaluate bivariate statement.")
+                    raise ParsingError("Parsed.eval_bind",
+                        "Couldn't evaluate bivariate statement.")
         elif len(self.__raw_args) == 2:
             larg = self.__raw_args[0]
             rarg = self.__raw_args[1]
@@ -346,21 +376,29 @@ class Parsed:
                     raise ParsingError("Parsed.eval_bind", "3D implicit plots are not supported.")
                 else:
                     self.__bind(None, self.__raw_relation(larg, rarg), PlotType.IMPLICIT_2D)
-            elif isinstance(larg, Parser.FUNC_TYPES) \
-                and not larg_name is None and not parser.is_defined(larg_name):
+            elif isinstance(larg, Parser.FUNC_TYPES):
+                if larg_name is None or parser.is_defined(larg_name):
+                    raise ParsingError("Parsed.eval_bind",
+                        "Function name already defined or reserved.")
                 args = larg.args
                 if any([not isinstance(a, Parser.VAR_TYPES) for a in args]):
                     raise ParsingError("Parsed.eval_bind", "Function arguments must be symbols.")
                 elif len(args) != len(set(args)):
                     raise ParsingError("Parsed.eval_bind", "Duplicate parameters.")
-                else:
-                    self.__bind(sy.Function(larg_name), sy.Lambda(args, rarg), None)
-            elif isinstance(larg, Parser.VAR_TYPES) \
-                and not larg in xyz and not parser.is_defined(larg_name):
+                func = sy.Lambda(args, rarg)
+                if len(parser.get_symbols(func, Parser.FILTER_RESERVED)) > 0:
+                    raise ParsingError("Parsed.eval_bind", "Cannot map to reserved variables.")
+                self.__bind(sy.Function(larg_name), func, None)
+            elif isinstance(larg, Parser.VAR_TYPES):
+                if parser.is_defined(larg_name):
+                    raise ParsingError("Parsed.eval_bind",
+                        "Variable name already defined or reserved.")
+                if len(parser.get_symbols(rarg, Parser.FILTER_RESERVED)) > 0:
+                    raise ParsingError("Parsed.eval_bind", "Cannot map to reserved variables.")
                 self.__bind(larg, rarg, None)
             elif Parser.Z in xyz:
                 sol = sy.solve(sy.Eq(larg, rarg), Parser.Z, domain = sy.S.Reals)
-                if isinstance(sol, (list, tuple)):
+                if isinstance(sol, (list, tuple, Tuple)):
                     if len(sol) == 0:
                         raise ParsingError("Parsed.eval_bind", "No solutions.")
                     elif len(sol) == 1:
@@ -372,7 +410,7 @@ class Parsed:
                     self.__bind(Parser.Z, sol, PlotType.SURFACE)
             elif Parser.Y in xyz:
                 sol = sy.solve(sy.Eq(larg, rarg), Parser.Y, domain = sy.S.Reals)
-                if isinstance(sol, (list, tuple)):
+                if isinstance(sol, (list, tuple, Tuple)):
                     self.__bind(None, sy.Eq(larg, rarg), PlotType.IMPLICIT_2D)
                 else:
                     self.__bind(Parser.Y, sol, PlotType.LINE_2D)
@@ -396,7 +434,7 @@ class Parsed:
                 raise ParsingError("Parsed.bind", "No solutions for " + str(name) + ".")
             elif len(body) == 1:
                 body = body[0]
-        if not isinstance(body, (sy.Expr, Relational, tuple)):
+        if not isinstance(body, (sy.Expr, Relational, tuple, Tuple)):
             raise ParsingError("Parsed.bind", "Invalid bind.")
         self.__raw_binding = Binding(name, body, plot_type)
 

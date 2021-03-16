@@ -43,6 +43,7 @@ class EquationEditor(ScrollableFrame):
         self.__dividers = []
 
         self.__plots = []
+        self.__raw_plots = []
         self.__bindings = []
 
         self.__add_button_height = 0.05
@@ -73,7 +74,8 @@ class EquationEditor(ScrollableFrame):
             counter += 1
 
     def __add_entry(self, settings = None):
-        eq = Equation(self.get_inner_frame(), self.__update, self.__remove_entry, settings)
+        eq = Equation(self.get_inner_frame(), self.__update, self.__replot,
+            self.__remove_entry, settings)
         eq.configure(width = self.__entry_width)
         eq.div = EquationDivider(self.get_inner_frame())
         self.__dividers.append(eq.div)
@@ -186,11 +188,18 @@ class EquationEditor(ScrollableFrame):
                 p.label(EquationLabelType.ERROR, "Invalid atoms.")
             else:
                 p.label(EquationLabelType.VALUE, str(p))
-        self.__plots = list(filter(lambda p : p.is_valid() \
+        self.__raw_plots = list(filter(lambda p : p.is_valid() \
             and len(p.get_free_symbols()) == 0, self.__plots))
 
+        self.__replot(no_change = True)
+        if not no_change: self.__change_func()
+    def __replot(self, no_change = False):
+        self.__plots = self.__raw_plots
         plot_entries = list(map(lambda p : p.get_equation(), self.__plots))
         for e in self.__entries:
             e.set_state(e in plot_entries)
-        self.__plotter(list(filter(lambda p : not p.get_equation().is_hidden(), self.__plots)))
+        def plot_allowed(p):
+            eq = p.get_equation()
+            return not eq.is_hidden() and not eq.has_cancelled_plot()
+        self.__plotter(list(filter(plot_allowed, self.__plots)))
         if not no_change: self.__change_func()

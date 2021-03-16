@@ -3,7 +3,7 @@ import enum
 import tkinter as tk
 
 from utils.images import ImageManager
-from utils.parsing import Parsed
+from utils.parsing import Parser, Parsed
 from utils.delay import DelayTracker
 from utils.theme import Theme
 from utils.maths import PlotType
@@ -17,23 +17,54 @@ class EquationLabelType(enum.Enum):
 
 class EquationValue(tk.Frame):
 
-    def __init__(self, parent, name, value, command):
+    HEIGHT = 38
+
+    def __init__(self, parent, command):
         theme = Theme.get_instance()
-        super().__init__(parent, bg = theme.get_body_colour())
+        super().__init__(parent, bg = theme.get_body_colour(), height = EquationValue.HEIGHT)
 
-        w, b = 6, 2
-        if len(name) > w - b:
-            name = name[0:w - b] + "..."
-        self.__label = tk.Label(self, text = name, width = w)
+        self.__symbol = Parser.T
+
+        self.__label = tk.Label(self, text = str(self.__symbol))
+        self.__to = tk.Label(self, text = "to")
         theme.configure_label(self.__label)
-        self.__label.pack(side = tk.LEFT)
+        theme.configure_label(self.__to)
 
-        self.__entry_var = tk.StringVar()
-        self.__entry_var.set(str(value))
-        self.__entry_var.trace('w', command)
-        self.__entry = tk.Entry(self, textvariable = self.__entry_var)
-        theme.configure_entry(self.__entry)
-        self.__entry.pack(side = tk.RIGHT)
+        self.__entry_var_l = tk.StringVar()
+        self.__entry_var_r = tk.StringVar()
+        self.__entry_var_l.set("-1")
+        self.__entry_var_r.set("1")
+        self.__entry_var_l.trace('w', command)
+        self.__entry_var_r.trace('w', command)
+        self.__entry_l = tk.Entry(self, textvariable = self.__entry_var_l)
+        self.__entry_r = tk.Entry(self, textvariable = self.__entry_var_r)
+        theme.configure_entry(self.__entry_l)
+        theme.configure_entry(self.__entry_r)
+
+        self.__label.place(relx = 0, relwidth = 0.15)
+        self.__entry_l.place(relx = 0.15, relwidth = 0.35)
+        self.__to.place(relx = 0.5, relwidth = 0.15)
+        self.__entry_r.place(relx = 0.65, relwidth = 0.35)
+
+    def set_data(self, name, lb, ub):
+        self.__symbol = name
+        self.__label.configure(text = str(name))
+        self.__entry_var_l.set(str(lb))
+        self.__entry_var_r.set(str(ub))
+
+    def get_symbol(self):
+        return self.__symbol
+    def get_dict(self):
+        l = self.__entry_var_l.get()
+        r = self.__entry_var_r.get()
+        l, r = Parser.get_instance().parse_number((l, r))
+        if any(map(lambda n : n is None, [l, r])):
+            return None
+        else:
+            l = float(l)
+            r = float(r)
+            if l > r: l, r = r, l
+            return { self.__symbol : (l, r) }
 
 class Equation(tk.Frame):
 
@@ -45,20 +76,23 @@ class Equation(tk.Frame):
 
     __counter = 0
 
-    def __init__(self, parent, update_fun, remove_func, settings = None):
+    def __init__(self, parent, update_func, replot_func, remove_func, settings = None):
         super().__init__(parent)
 
         if settings is None: settings = {}
 
-        self.__update_fun = update_fun
+        self.__update_func = update_func
+        self.__replot_func = replot_func
         self.__remove_func = remove_func
 
-        self.__debounce_id = None
+        self.__debounce_update_id = None
+        self.__debounce_replot_id = None
         self.__debounce_delay = 500
 
         self.div = None
 
         self.__plottable = False
+        self.__cancel_plot = False
         self.__parsed = Parsed("")
 
         self.__min_height = 38
@@ -96,8 +130,12 @@ class Equation(tk.Frame):
                 self.__readout_height))
         self.__readout_tooltip = Tooltip(self.__readout)
 
-        self.__values = []
-        self.__value_height = self.__min_height
+        self.__value_1 = EquationValue(self.__content_wrapper, self.__debounce_replot)
+        self.__value_2 = EquationValue(self.__content_wrapper, self.__debounce_replot)
+        self.__values = (self.__value_1, self.__value_2)
+        self.__value_count = 0
+        self.__value_height = EquationValue.HEIGHT
+        self.__parametric_limits = {}
 
         self.__content_wrapper.place(x = self.__button_size + self.__spacing,
             y = self.__min_height + self.__spacing,
@@ -208,20 +246,20 @@ class Equation(tk.Frame):
         on, off = ("hidden", "hide")
         def hide():
             self.__hidden = not self.__hidden
-            self.__update()
             self.__hide_button.config(
                 image = self.__get_button_image(on if self.__hidden else off),
                 relief = tk.SUNKEN if self.__hidden else tk.RAISED)
+            self.__replot()
         self.__hide_button = self.__create_button(hide, off)
         if bool(settings.get(Equation.HIDE_KEY, False)): hide()
     def __construct_contour(self, settings):
         on, off = ("contour", "surface")
         def contour():
             self.__contoured = not self.__contoured
-            self.__update()
             self.__contour_button.config(
                 image = self.__get_button_image(on if self.__contoured else off),
                 relief = tk.SUNKEN if self.__contoured else tk.RAISED)
+            self.__replot()
         self.__contour_button = self.__create_button(contour, off)
         if bool(settings.get(Equation.CONTOUR_KEY, False)): contour()
     def __construct_remove(self):
@@ -238,7 +276,7 @@ class Equation(tk.Frame):
         return ImageManager.get_instance().get_image(path + ".png", self.__button_size,
             self.__button_size)
 
-    def __close_colour_window(self, _e = None, update = True):
+    def __close_colour_window(self, *_args):
         if self.__colour_window_open:
             self.__colour_window_open = False
             w = self.__colour_window
@@ -246,8 +284,8 @@ class Equation(tk.Frame):
             self.__colour_frame = None
             self.__red = self.__green = self.__blue = None
             w.destroy()
-            if update: self.__update()
-    def __colour_update(self, _e = None):
+            self.__replot()
+    def __colour_update(self, *_args):
         if not any(map(lambda w : w is None, (self.__red, self.__green, self.__blue))):
             self.__r = self.__red.get()
             self.__g = self.__green.get()
@@ -266,40 +304,57 @@ class Equation(tk.Frame):
         return settings
 
     def __debounce_update(self, *_args):
-        if self.__debounce_id is not None:
-            DelayTracker.get_instance().end_delay(self, self.__debounce_id)
-        self.__debounce_id = self.after(self.__debounce_delay, self.__update)
-        DelayTracker.get_instance().add_delay(self, self.__debounce_id)
-    def update(self):
-        DelayTracker.get_instance().remove_delay(self, self.__debounce_id)
-        self.__debounce_id = None
-        self.__parsed = Parsed(self.get_text())
-        self.__parsed.set_equation(self)
+        if self.__debounce_update_id is not None:
+            DelayTracker.get_instance().end_delay(self, self.__debounce_update_id)
+        self.__debounce_update_id = self.after(self.__debounce_delay, self.__update)
+        DelayTracker.get_instance().add_delay(self, self.__debounce_update_id)
+    def __debounce_replot(self, *_args):
+        if self.__debounce_replot_id is not None:
+            DelayTracker.get_instance().end_delay(self, self.__debounce_replot_id)
+        self.__debounce_replot_id = self.after(self.__debounce_delay, self.__replot)
+        DelayTracker.get_instance().add_delay(self, self.__debounce_replot_id)
+
+    def __generic_updates(self):
+        b = self.__parsed.get_binding()
+        if b is not None and b.get_plot_type() in PlotType.parametric():
+            self.__value_count = len(b.get_tuv_symbols())
+        else:
+            self.__value_count = 0
+        self.__cancel_plot = False
+        for i in range(self.__value_count):
+            if self.__values[i].get_dict() is None:
+                self.__cancel_plot = True
+                break
         self.__parsed.set_colour((self.__r / 255.0, self.__g / 255.0, self.__b / 255.0))
     def __update(self, *_args):
-        self.update()
-        self.__update_fun(self)
+        DelayTracker.get_instance().remove_delay(self, self.__debounce_update_id)
+        self.__debounce_update_id = None
+        self.__parsed = Parsed(self.get_text())
+        self.__parsed.set_equation(self)
+        self.__generic_updates()
+        self.__update_func(self)
+    def __replot(self, *_args):
+        self.__generic_updates()
+        self.__replot_func()
     def set_width(self, w):
         self.__inner.configure(width = w)
 
-    def force_text(self, text):
-        self.__entry.delete(0, tk.END)
-        self.__entry.insert(0, text)
     def label(self, t, text):
         self.__readout_type = t
         self.__readout_tooltip.set_text(text)
 
     def __place_buttons(self):
         buttons = []
-        if self.__plottable:
+        plot_buttons = self.__plottable and not self.__cancel_plot
+        if plot_buttons:
             buttons.append(self.__colour_button)
             buttons.append(self.__hide_button)
         else:
             self.__colour_button.place_forget()
             self.__hide_button.place_forget()
-            self.__close_colour_window(update = False)
+            self.__close_colour_window()
         buttons.append(self.__lock_button)
-        if self.__plottable and self.get_parsed().get_binding().get_plot_type() in \
+        if plot_buttons and self.get_parsed().get_binding().get_plot_type() in \
             [PlotType.SURFACE, PlotType.PARAMETRIC_SURFACE]:
             buttons.append(self.__contour_button)
         else:
@@ -311,19 +366,28 @@ class Equation(tk.Frame):
                 w = self.__button_size, h = self.__button_size)
     def __place_content(self):
         for v in self.__values: v.pack_forget()
-        self.__values = []
-        self.__values.append(EquationValue(self.__content_wrapper, "name", "7", None))
-        self.__values[-1].pack()
-        self.__values.append(EquationValue(self.__content_wrapper, "superlongname12345", "7", None))
-        self.__values[-1].pack()
-
         self.__readout.pack_forget()
+
+        b = self.__parsed.get_binding()
+        if self.__plottable and b.get_plot_type() in PlotType.parametric():
+            tuv = b.get_tuv_symbols()
+            for i, x in enumerate(sorted(list(tuv), key = str)):
+                if self.__values[i].get_symbol() != x:
+                    self.__values[i].set_data(x, *self.__parametric_limits.get(x, (-1, 1)))
+                self.__values[i].pack(fill = tk.X, expand = True)
+            if self.__cancel_plot:
+                self.label(EquationLabelType.ERROR, "Invalid parametric limits.")
+            else:
+                for i in range(self.__value_count):
+                    self.__parametric_limits.update(self.__values[i].get_dict())
+            b.set_parametric_limits(self.__parametric_limits)
+
         if self.__readout_active: self.__readout.pack()
     def __set_height(self):
         buttons = (self.__button_size + self.__spacing) * self.__button_count - self.__spacing
 
         content = self.__min_height + self.__spacing
-        content += self.__value_height * len(self.__values)
+        content += self.__value_height * self.__value_count
         if self.__readout_active:
             content += self.__readout_height
 
@@ -348,6 +412,8 @@ class Equation(tk.Frame):
 
     def is_plottable(self):
         return self.__plottable
+    def has_cancelled_plot(self):
+        return self.__cancel_plot
     def is_hidden(self):
         return self.__hidden
     def is_contoured(self):
