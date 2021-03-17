@@ -171,7 +171,9 @@ class Equation(tk.Frame):
         self.__construct_lock(settings)
         self.__construct_hide(settings)
         self.__construct_contour(settings)
+        self.__construct_refresh()
         self.__construct_remove()
+
         self.__place_buttons()
 
         self.pack(fill = tk.BOTH, expand = True)
@@ -280,6 +282,8 @@ class Equation(tk.Frame):
             self.pack_forget()
             self.__remove_func(self)
         self.__remove_button = self.__create_button(lambda s = self : remove(s), "remove")
+    def __construct_refresh(self):
+        self.__refresh_button = self.__create_button(self.__update, "refresh")
     def __create_button(self, command, path):
         button = tk.Button(self.__inner, command = command)
         if path is not None: button.configure(image = self.__get_button_image(path))
@@ -374,6 +378,12 @@ class Equation(tk.Frame):
             self.__colour_button.place_forget()
             self.__hide_button.place_forget()
             self.__close_colour_window()
+        if plot_buttons and self.__parsed.get_binding().get_plot_type() in [PlotType.IMPLICIT_2D]:
+            self.__refresh_button.place(relx = 1, rely = 1,
+                x = -(self.__button_size + self.__spacing),
+                y = -(self.__button_size + self.__spacing))
+        else:
+            self.__refresh_button.place_forget()
         buttons.append(self.__lock_button)
         if plot_buttons and self.get_parsed().get_binding().get_plot_type() in \
             [PlotType.SURFACE, PlotType.PARAMETRIC_SURFACE]:
