@@ -187,7 +187,7 @@ class EquationEditor(ScrollableFrame):
             elif not p.is_valid():
                 p.label(EquationLabelType.ERROR, "Invalid atoms.")
             else:
-                p.label(EquationLabelType.VALUE, str(p))
+                p.get_equation().label()
         self.__raw_plots = list(filter(lambda p : p.is_valid() \
             and len(p.get_free_symbols()) == 0, self.__plots))
 

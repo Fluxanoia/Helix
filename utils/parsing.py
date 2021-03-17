@@ -91,6 +91,8 @@ class Parser:
     def subs(self, expr, sb = None):
         if isinstance(expr, (tuple, Tuple)):
             return tuple(map(lambda e : self.subs(e, sb), expr))
+        if isinstance(expr, list):
+            return list(map(lambda e : self.subs(e, sb), expr))
         try:
             expr = expr.subs(self.__default_subs if sb is None else sb)
         except Exception as e:
@@ -99,6 +101,8 @@ class Parser:
     def replace(self, expr, rp = None):
         if isinstance(expr, (tuple, Tuple)):
             return tuple(map(lambda e : self.replace(e, rp), expr))
+        if isinstance(expr, list):
+            return list(map(lambda e : self.replace(e, rp), expr))
         if rp is None: rp = self.__default_repl
         try:
             for (f, t) in rp: expr = expr.replace(f, t)
@@ -108,6 +112,8 @@ class Parser:
     def transform(self, expr, tr = None):
         if isinstance(expr, (tuple, Tuple)):
             return tuple(map(lambda e : self.transform(e, tr), expr))
+        if isinstance(expr, list):
+            return list(map(lambda e : self.transform(e, tr), expr))
         if tr is None: tr = self.__default_trans
         try:
             for (f, t) in tr: expr = expr.replace(f, t)
@@ -120,7 +126,7 @@ class Parser:
         return expr
 
     def is_valid(self, expr):
-        if isinstance(expr, (tuple, Tuple)):
+        if isinstance(expr, (tuple, Tuple, list)):
             return all(map(self.is_valid, expr))
         return len(expr.atoms(*self.__invalid_atoms)) == 0
 
@@ -176,15 +182,29 @@ class Parser:
 
 class Binding:
 
-    def __init__(self, name, body, plot_type):
+    def __init__(self, name, body, plot_type,
+        dep = None, eq = None, cl = None, pl = None, sig = None):
         self.__name = name
         self.__body = body
         self.__plot_type = plot_type
-        self.__dependencies = set()
-        self.__equation = None
-        self.__colour = None
 
-        self.__parametric_lims = {}
+        self.__dependencies = set() if dep is None else dep
+        self.__equation = eq
+        self.__colour = cl
+        self.__parametric_lims = {} if pl is None else pl
+
+        self.__signature = sig
+
+    def split(self):
+        if isinstance(self.__body, list):
+            f = lambda b : Binding(self.__name, b,
+                self.__plot_type, self.__dependencies,
+                self.__equation, self.__colour,
+                self.__parametric_lims)
+            return [f(b) for b in self.__body]
+        return [self]
+    def get_signature(self):
+        return self if self.__signature is None else self.__signature
 
     def label(self, t, text):
         if not self.__equation is None: self.__equation.label(t, text)
@@ -340,12 +360,16 @@ class Parsed:
             raise ParsingError("Parsed.eval_bind", "(x, y, z) and (t, u, v) shouldn't be mixed.")
         if self.__is_parametric:
             if len(self.__raw_args) == 2:
-                if len(tuv) < 2:
+                if len(tuv) == 0:
+                    raise ParsingError("Parsed.eval_bind", "Too few parametric variables.")
+                elif len(tuv) < 2:
                     self.__bind(tuple(tuv), tuple(self.__raw_args), PlotType.PARAMETRIC_2D)
                 else:
                     raise ParsingError("Parsed.eval_bind", "Too many parametric variables.")
             elif len(self.__raw_args) == 3:
-                if len(tuv) < 2:
+                if len(tuv) == 0:
+                    raise ParsingError("Parsed.eval_bind", "Too few parametric variables.")
+                elif len(tuv) < 2:
                     self.__bind(tuple(tuv), tuple(self.__raw_args), PlotType.PARAMETRIC_3D)
                 elif len(tuv) == 2:
                     self.__bind(tuple(tuv), tuple(self.__raw_args), PlotType.PARAMETRIC_SURFACE)
@@ -406,16 +430,13 @@ class Parsed:
                     elif len(sol) == 1:
                         self.__bind(Parser.Z, sol[0], PlotType.SURFACE)
                     else:
-                        # TODO multiple bindings
-                        pass
+                        self.__bind(Parser.Z, sol, PlotType.SURFACE)
                 else:
                     self.__bind(Parser.Z, sol, PlotType.SURFACE)
             elif Parser.Y in xyz:
                 sol = sy.solve(sy.Eq(larg, rarg), Parser.Y, domain = sy.S.Reals)
                 if isinstance(sol, (list, tuple, Tuple)):
-                    if len(sol) == 0:
-                        raise ParsingError("Parsed.eval_bind", "No solutions.")
-                    elif len(sol) == 1:
+                    if len(sol) == 1:
                         self.__bind(Parser.Y, sol[0], PlotType.LINE_2D)
                     else:
                         self.__bind(None, sy.Eq(larg, rarg), PlotType.IMPLICIT_2D)
@@ -441,7 +462,7 @@ class Parsed:
                 raise ParsingError("Parsed.bind", "No solutions for " + str(name) + ".")
             elif len(body) == 1:
                 body = body[0]
-        if not isinstance(body, (sy.Expr, Relational, tuple, Tuple)):
+        if not isinstance(body, (sy.Expr, Relational, tuple, Tuple, list)):
             raise ParsingError("Parsed.bind", "Invalid bind.")
         self.__raw_binding = Binding(name, body, plot_type)
 

@@ -67,6 +67,7 @@ class FileManager:
         path = filedialog.askopenfilename(title = "Loading a Project",
             filetypes = [("Helix Project Files", "*" + FileManager.PROJECT_EXT)],
             defaultextension = FileManager.PROJECT_EXT)
+        if len(path) == 0: return
         data = None
         try:
             data = self.__load_file(path, default_settings)
@@ -82,6 +83,7 @@ class FileManager:
             path = filedialog.asksaveasfilename(title = "Saving the Project",
                 filetypes = [("Helix Project Files", "*" + FileManager.PROJECT_EXT)],
                 defaultextension = FileManager.PROJECT_EXT)
+            if len(path) == 0: return
         else:
             path = self.__current_path
         try:

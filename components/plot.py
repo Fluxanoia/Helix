@@ -113,11 +113,18 @@ class HelixPlot(FigureCanvasTkAgg):
     def set_plots(self, plots, dim):
         if self.__dim is not dim:
             raise ValueError("Incorrect plot dimension.")
-        existing_plots = list(map(lambda d : d.get_plot(), self.__data))
-        to_remove = [p for p in self.__data if not p.get_plot() in plots]
+        input_sigs = list(map(lambda s : s.get_signature(), plots))
+        to_remove = [d for d in self.__data if d.get_signature() not in input_sigs]
         self.__data = [d for d in self.__data if not d in to_remove]
-        plots = [p for p in plots if not p in existing_plots]
-        self.__data.extend([HelixSeries.generate_series(p) for p in plots])
+        current_sigs = list(map(lambda s : s.get_signature(), self.__data))
+        plots = [p for p in plots if p.get_signature() not in current_sigs]
+        for p in plots:
+            self.__data.extend([HelixSeries.generate_series(p) for p in p.split()])
+        # existing_plots = list(map(lambda d : d.get_plot(), self.__data))
+        # to_remove = [p for p in self.__data if not p.get_plot() in plots]
+        # self.__data = [d for d in self.__data if not d in to_remove]
+        # plots = [p for p in plots if not p in existing_plots]
+        # self.__data.extend([HelixSeries.generate_series(p) for p in plots])
 
     def __debounce_redraw(self):
         if self.__debounce_id is not None:
