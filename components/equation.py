@@ -185,23 +185,32 @@ class Equation(tk.Frame):
             self.__colour_frame = tk.Frame(self.__colour_window)
             theme.configure_colour_window(self.__colour_frame)
 
+            title = tk.Label(self.__colour_frame, text = "Paint Selection")
+            theme.configure_scale(title)
+            title.pack(side = tk.TOP, expand = True, fill = tk.X)
+
+            scales = []
             args = {
                 "from_" : 0,
                 "to" : 255,
                 "command" : self.__colour_update,
                 "orient" : tk.HORIZONTAL,
                 "bg" : theme.get_body_colour(),
-                "length" : 120
+                "length" : 200
             }
-            title = tk.Label(self.__colour_window, text = "Paint Selection")
-            theme.configure_scale(title)
-            title.pack()
-            self.__red = tk.Scale(self.__colour_window, args)
-            self.__green = tk.Scale(self.__colour_window, args)
-            self.__blue = tk.Scale(self.__colour_window, args)
-            for w in [self.__red, self.__green, self.__blue]:
-                theme.configure_scale(w)
-                w.pack()
+            names = ("R", "G", "B")
+            for n in names:
+                frame = tk.Frame(self.__colour_frame)
+                theme.configure_colour_window(frame)
+                label = tk.Label(frame, text = n, width = 3)
+                scale = tk.Scale(frame, args)
+                scales.append(scale)
+                theme.configure_label(label)
+                theme.configure_scale(scale)
+                label.pack(side = tk.LEFT)
+                scale.pack(side = tk.RIGHT, fill = tk.X, expand = True)
+                frame.pack(side = tk.TOP, fill = tk.X, expand = True)
+            self.__red, self.__green, self.__blue = tuple(scales)
             self.__red.set(self.__r)
             self.__green.set(self.__g)
             self.__blue.set(self.__b)
