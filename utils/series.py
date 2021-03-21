@@ -21,7 +21,7 @@ from utils.override import overrides
 
 class HelixSeries(ABC):
 
-    def __init__(self, plot):
+    def __init__(self, plot, detail):
         self._plot = plot
         self._data = []
         self._series = None
@@ -31,11 +31,21 @@ class HelixSeries(ABC):
         self._max_y = None
         self._min_z = None
         self._max_z = None
-        self._point_density = 2.5
+        self._point_density = detail
         self._is_parametric = False
 
     @abstractmethod
     def draw(self, axis, xlim, ylim, zlim): pass
+
+    def set_detail(self, detail):
+        self._data = []
+        self._min_x = None
+        self._max_x = None
+        self._min_y = None
+        self._max_y = None
+        self._min_z = None
+        self._max_z = None
+        self._point_density = detail
 
     def _expand_data(self, xlim, ylim, zlim):
         if self.__unbounded():
@@ -94,17 +104,18 @@ class HelixSeries(ABC):
         def p_check(v):
             return v[0] >= xlim[0] and v[0] <= xlim[1] \
                 and v[1] >= ylim[0] and v[1] <= ylim[1]
-        return [v for v in self._data if p_check(v[0]) or p_check(v[1])]
+        d = [v for v in self._data if p_check(v[0]) or p_check(v[1])]
+        return None if len(d) == 0 else d
 
     def _safe_get_mesh(self):
         x, y, z = self._series.get_meshes()
         nx = ny = "nb_of_points_"
         if self._is_parametric:
-            nx += 'x'
-            ny += 'y'
-        else:
             nx += 'u'
             ny += 'v'
+        else:
+            nx += 'x'
+            ny += 'y'
         if not x.shape:
             x = x.max() * ma.ones((getattr(self._series, ny), getattr(self._series, nx)))
         if not y.shape:
@@ -115,9 +126,9 @@ class HelixSeries(ABC):
     def _expand_mesh(self, xlim, ylim):
         sx, ex, nx = "start_", "end_", "nb_of_points_"
         if self._is_parametric:
-            x, y = 'x', 'y'
-        else:
             x, y = 'u', 'v'
+        else:
+            x, y = 'x', 'y'
         sy_, ey, ny = sx + y, ex + y, nx + y
         sx, ex, nx = sx + x, ex + x, nx + x
 
@@ -125,9 +136,14 @@ class HelixSeries(ABC):
         setattr(self._series, ex, xlim[1])
         setattr(self._series, sy_, ylim[0])
         setattr(self._series, ey, ylim[1])
+
+        xp = math.ceil((xlim[1] - xlim[0]) * self._point_density)
+        yp = math.ceil((ylim[1] - ylim[0]) * self._point_density)
+
         if self.__unbounded():
-            setattr(self._series, nx, math.ceil((xlim[1] - xlim[0]) * self._point_density))
-            setattr(self._series, ny, math.ceil((ylim[1] - ylim[0]) * self._point_density))
+            if xp < 2 or yp < 2: return
+            setattr(self._series, nx, xp)
+            setattr(self._series, ny, yp)
             self._data = self._safe_get_mesh()
         else:
             prepend_x = xlim[0] < self._min_x
@@ -136,7 +152,8 @@ class HelixSeries(ABC):
             append_y = ylim[1] > self._max_y
             assert len([x for x in [prepend_x, append_x, prepend_y, append_y] if x]) == 1
             if prepend_x or append_x:
-                setattr(self._series, nx, math.ceil((xlim[1] - xlim[0]) * self._point_density))
+                if xp == 0: return
+                setattr(self._series, nx, xp)
                 setattr(self._series, ny, len(self._data[1]))
                 x, y, z = self._safe_get_mesh()
                 if prepend_x:
@@ -148,8 +165,9 @@ class HelixSeries(ABC):
                     y = np.concatenate((self._data[1], y), axis = 1)
                     z = ma.concatenate((self._data[2], z), axis = 1)
             if prepend_y or append_y:
+                if yp == 0: return
                 setattr(self._series, nx, len(self._data[0][0]))
-                setattr(self._series, ny, math.ceil((ylim[1] - ylim[0]) * self._point_density))
+                setattr(self._series, ny, yp)
                 x, y, z = self._safe_get_mesh()
                 if prepend_y:
                     x = np.concatenate((x, self._data[0]), axis = 0)
@@ -161,10 +179,18 @@ class HelixSeries(ABC):
                     z = ma.concatenate((self._data[2], z), axis = 0)
             self._data = (x, y, z)
     def _get_mesh(self, xlim, ylim, zlim):
-        (x, y, z) = self._data
+        try:
+            (x, y, z) = self._data
+        except:
+            return None
 
         xi = [i for i, v in enumerate(x[0]) if v >= xlim[0] and v <= xlim[1]]
         yi = [i for i, v in enumerate(y) if v[0] >= ylim[0] and v[0] <= ylim[1]]
+        if xi[-1] < len(x[0]): xi[-1] += 1
+        if yi[-1] < len(y): yi[-1] += 1
+        if xi[-1] - xi[0] < 2 or yi[-1] - yi[0] < 2:
+            return None
+
         x = x[yi[0]:yi[-1], xi[0]:xi[-1]]
         y = y[yi[0]:yi[-1], xi[0]:xi[-1]]
         z = z[yi[0]:yi[-1], xi[0]:xi[-1]]
@@ -174,29 +200,31 @@ class HelixSeries(ABC):
         x = np.where(cond, x, np.nan)
         y = np.where(cond, y, np.nan)
         z = np.where(cond, z, np.nan)
+        if any(map(lambda d : len(d) == 0, (x, y, z))):
+            return None
         return (x, y, z)
 
     @staticmethod
-    def generate_series(plot):
+    def generate_series(plot, detail):
         pt = plot.get_plot_type()
         if pt == PlotType.LINE_2D:
-            return Line2DPlot(plot)
+            return Line2DPlot(plot, detail)
         elif pt == PlotType.PARAMETRIC_2D:
-            return Parametric2DPlot(plot)
+            return Parametric2DPlot(plot, detail)
         elif pt == PlotType.IMPLICIT_2D:
-            return Implicit2DPlot(plot)
+            return Implicit2DPlot(plot, detail)
         elif pt == PlotType.SURFACE:
-            return SurfacePlot(plot)
+            return SurfacePlot(plot, detail)
         elif pt == PlotType.PARAMETRIC_3D:
-            return Parametric3DLinePlot(plot)
+            return Parametric3DLinePlot(plot, detail)
         elif pt == PlotType.PARAMETRIC_SURFACE:
-            return ParametricSurfacePlot(plot)
+            return ParametricSurfacePlot(plot, detail)
         raise ValueError("Unexpected plot type.")
 
 class Line2DPlot(HelixSeries):
 
-    def __init__(self, plot):
-        super().__init__(plot)
+    def __init__(self, plot, detail):
+        super().__init__(plot, detail)
         check = check_arguments([self._plot.get_body()], 1, 1)[0]
         self._series = LineOver1DRangeSeries(*check)
 
@@ -207,13 +235,15 @@ class Line2DPlot(HelixSeries):
     @overrides
     def draw(self, axis, xlim, ylim, zlim):
         self._expand_data(xlim, ylim, zlim)
-        axis.add_collection(LineCollection(self._get_line(xlim, ylim),
+        d = self._get_line(xlim, ylim)
+        if d is None: return
+        axis.add_collection(LineCollection(d,
             colors = self._plot.get_colour()))
 
 class Parametric2DPlot(HelixSeries):
 
-    def __init__(self, plot):
-        super().__init__(plot)
+    def __init__(self, plot, detail):
+        super().__init__(plot, detail)
         self._series = Parametric2DLineSeries(*(check_arguments(self._plot.get_body(), 2, 1)[0]))
 
     @overrides
@@ -225,8 +255,8 @@ class Parametric2DPlot(HelixSeries):
 
 class Implicit2DPlot(HelixSeries):
 
-    def __init__(self, plot):
-        super().__init__(plot)
+    def __init__(self, plot, detail):
+        super().__init__(plot, detail)
 
         expr = self._plot.get_body()
 
@@ -255,6 +285,8 @@ class Implicit2DPlot(HelixSeries):
             True, 0, 300, self._plot.get_colour())
 
     @overrides
+    def set_detail(self, detail): pass
+    @overrides
     def _generate_data(self, xlim, ylim, zlim):
         if self._dx(xlim) or self._dy(ylim):
             self._series.start_x, self._series.end_x = xlim
@@ -268,8 +300,8 @@ class Implicit2DPlot(HelixSeries):
 
 class SurfacePlot(HelixSeries):
 
-    def __init__(self, plot):
-        super().__init__(plot)
+    def __init__(self, plot, detail):
+        super().__init__(plot, detail)
         self._series = SurfaceOver2DRangeSeries(*check_arguments([self._plot.get_body()], 1, 2)[0])
 
     @overrides
@@ -279,16 +311,18 @@ class SurfacePlot(HelixSeries):
     @overrides
     def draw(self, axis, xlim, ylim, zlim):
         self._expand_data(xlim, ylim, zlim)
+        d = self._get_mesh(xlim, ylim, zlim)
+        if d is None: return
         if self._plot.get_equation().is_contoured():
-            axis.contour(*self._get_mesh(xlim, ylim, zlim), colors = [self._plot.get_colour()])
+            axis.contour(*d, colors = [self._plot.get_colour()])
         else:
-            axis.plot_surface(*self._get_mesh(xlim, ylim, zlim), color = self._plot.get_colour(),
+            axis.plot_surface(*d, color = self._plot.get_colour(),
                 rstride = 1, cstride = 1, linewidth = 0.1)
 
 class Parametric3DLinePlot(HelixSeries):
 
-    def __init__(self, plot):
-        super().__init__(plot)
+    def __init__(self, plot, detail):
+        super().__init__(plot, detail)
         self._series = Parametric3DLineSeries(*check_arguments(self._plot.get_body(), 3, 1)[0])
 
     @overrides
@@ -300,8 +334,8 @@ class Parametric3DLinePlot(HelixSeries):
 
 class ParametricSurfacePlot(HelixSeries):
 
-    def __init__(self, plot):
-        super().__init__(plot)
+    def __init__(self, plot, detail):
+        super().__init__(plot, detail)
         self._series = ParametricSurfaceSeries(*check_arguments(self._plot.get_body(), 3, 2)[0])
 
     @overrides

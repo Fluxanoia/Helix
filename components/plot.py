@@ -1,3 +1,5 @@
+import tkinter as tk
+
 import matplotlib as mpl
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from mpl_toolkits.mplot3d.axes3d import Axes3D
@@ -5,12 +7,14 @@ from mpl_toolkits.mplot3d.axes3d import Axes3D
 from utils.theme import Theme
 from utils.delay import DelayTracker
 from utils.maths import Dimension
+from utils.parsing import Parser
 from utils.series import HelixSeries
 
 class HelixPlot(FigureCanvasTkAgg):
 
-    def __init__(self, parent, press_func, drag_func, zoom_func):
+    def __init__(self, parent, detail, press_func, drag_func, zoom_func):
         super().__init__(mpl.figure.Figure(), master = parent)
+        theme = Theme.get_instance()
 
         self.__axis = None
 
@@ -22,6 +26,7 @@ class HelixPlot(FigureCanvasTkAgg):
 
         self.__elev = 30
         self.__azim = -60
+        self.__detail = detail
 
         self.__debounce_id = None
         self.__debounce_delay = 300
@@ -29,13 +34,13 @@ class HelixPlot(FigureCanvasTkAgg):
         self.__dim = None
 
         self.__figure = self.figure
-        Theme.get_instance().configure_figure(self.__figure)
+        theme.configure_figure(self.__figure)
 
         self.__axis2 = mpl.axes.Axes(self.__figure, (0, 0, 1, 1))
-        Theme.get_instance().configure_plot_2d(self.__axis2)
+        theme.configure_plot_2d(self.__axis2)
 
         self.__axis3 = Axes3D(self.__figure, (0, 0, 1, 1))
-        Theme.get_instance().configure_plot_3d(self.__axis3)
+        theme.configure_plot_3d(self.__axis3)
 
         self.__axis2.set_xlim(self.__xlim)
         self.__axis2.set_ylim(self.__ylim)
@@ -74,6 +79,32 @@ class HelixPlot(FigureCanvasTkAgg):
         self.widget().bind('<Enter>', self.__bind_scroll)
         self.widget().bind('<Leave>', self.__unbind_scroll)
 
+        def detail_func(*_args):
+            DelayTracker.get_instance().remove_delay(self.widget(), self.__debounce_detail_id)
+            v = Parser.get_instance().parse_number(self.__detailer_var.get())
+            if v is None: return None
+            self.set_detail(float(v))
+
+        def debounce_detail_func(*_args):
+            if self.__debounce_detail_id is not None:
+                DelayTracker.get_instance().end_delay(self.widget(), self.__debounce_detail_id)
+            self.__debounce_detail_id = self.widget().after(self.__debounce_delay, detail_func)
+            DelayTracker.get_instance().add_delay(self.widget(), self.__debounce_detail_id)
+
+        self.__debounce_detail_id = None
+        self.__debounce_delay = 500
+
+        self.__detail_label = tk.Label(self.widget(), text = "Points per unit:")
+        theme.configure_label(self.__detail_label)
+        theme.configure_viewer(self.__detail_label)
+
+        self.__detailer_var = tk.StringVar()
+        self.__detailer_var.set(str(self.__detail))
+        self.__detailer_var.trace('w', debounce_detail_func)
+        self.__detailer = tk.Entry(self.widget(),
+            textvariable = self.__detailer_var, w = 10)
+        theme.configure_entry(self.__detailer)
+
         self.draw()
 
     def widget(self):
@@ -94,8 +125,12 @@ class HelixPlot(FigureCanvasTkAgg):
         self.__axis = None
         if self.__dim is Dimension.TWO_D:
             self.__axis = self.__axis2
+            self.__detail_label.place_forget()
+            self.__detailer.place_forget()
         if self.__dim is Dimension.THREE_D:
             self.__axis = self.__axis3
+            self.__detail_label.place(x = 10, y = -70, rely = 1)
+            self.__detailer.place(x = 10, y = -40, rely = 1)
         if self.__dim is not None:
             self.__figure.add_axes(self.__axis)
         self.__limit_plot()
@@ -119,7 +154,7 @@ class HelixPlot(FigureCanvasTkAgg):
         current_sigs = list(map(lambda s : s.get_signature(), self.__data))
         plots = [p for p in plots if p.get_signature() not in current_sigs]
         for p in plots:
-            self.__data.extend([HelixSeries.generate_series(p) for p in p.split()])
+            self.__data.extend([HelixSeries.generate_series(p, self.__detail) for p in p.split()])
 
     def __debounce_redraw(self):
         if self.__debounce_id is not None:
@@ -149,3 +184,11 @@ class HelixPlot(FigureCanvasTkAgg):
             self.__axis3.set_xlabel('$x$', fontsize = 20)
             self.__axis3.set_ylabel('$y$', fontsize = 20)
             self.__axis3.set_zlabel('$z$', fontsize = 20)
+
+    def get_detail(self):
+        return self.__detail
+    def set_detail(self, detail):
+        self.__detail = detail
+        for d in self.__data:
+            d.set_detail(detail)
+        self.redraw()

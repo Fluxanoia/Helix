@@ -3,6 +3,7 @@ view_rect:-5.5476764490642045 -5.551623903396126 11.118692268395929 11.118692268
 view_elev:-147.38250000000005
 view_azim:-922.7975000000002
 view_cuboid:-15.011005634576865 -15.011005634576865 -15.011005634576865 30.02201126915373 30.02201126915373 30.02201126915373
+points_per_unit:2.0
 eq0:{'text': 'f(x) = x^2 - 3', 'colour': '224 82 99', 'locked': 0, 'hidden': 0, 'contoured': 0}
 eq1:{'text': 'f(x / 3)', 'colour': '99 193 50', 'locked': 0, 'hidden': 0, 'contoured': 0}
 eq2:{'text': 'sin(x) + cos(y)', 'colour': '0 200 70', 'locked': 0, 'hidden': 1, 'contoured': 0}
