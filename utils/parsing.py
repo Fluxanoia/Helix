@@ -228,8 +228,8 @@ class Binding:
 
     def __transform(self, func, tr, def_tr):
         fv = self.get_free_symbols()
-        self.__body = getattr(Parser.get_instance(), func)(self.__body, tr)
         if tr is None: tr = def_tr
+        self.__body = getattr(Parser.get_instance(), func)(self.__body, tr)
         for (d, _) in tr:
             if d in fv: self.__dependencies.add(d)
     def subs(self, sb = None):

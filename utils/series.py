@@ -186,6 +186,7 @@ class HelixSeries(ABC):
 
         xi = [i for i, v in enumerate(x[0]) if v >= xlim[0] and v <= xlim[1]]
         yi = [i for i, v in enumerate(y) if v[0] >= ylim[0] and v[0] <= ylim[1]]
+        if len(xi) < 2 or len(yi) < 2: return None
         if xi[-1] < len(x[0]): xi[-1] += 1
         if yi[-1] < len(y): yi[-1] += 1
         if xi[-1] - xi[0] < 2 or yi[-1] - yi[0] < 2:
@@ -244,6 +245,7 @@ class Parametric2DPlot(HelixSeries):
 
     def __init__(self, plot, detail):
         super().__init__(plot, detail)
+        self._is_parametric = True
         self._series = Parametric2DLineSeries(*(check_arguments(self._plot.get_body(), 2, 1)[0]))
 
     @overrides
@@ -323,6 +325,7 @@ class Parametric3DLinePlot(HelixSeries):
 
     def __init__(self, plot, detail):
         super().__init__(plot, detail)
+        self._is_parametric = True
         self._series = Parametric3DLineSeries(*check_arguments(self._plot.get_body(), 3, 1)[0])
 
     @overrides
@@ -336,6 +339,7 @@ class ParametricSurfacePlot(HelixSeries):
 
     def __init__(self, plot, detail):
         super().__init__(plot, detail)
+        self._is_parametric = True
         self._series = ParametricSurfaceSeries(*check_arguments(self._plot.get_body(), 3, 2)[0])
 
     @overrides
