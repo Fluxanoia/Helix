@@ -103,20 +103,33 @@ class EquationEditor(ScrollableFrame):
         if changed_eq is None:
             self.__bindings = []
             self.__plots = []
-            unaffected = []
+            unaffected_eqs = []
         else:
-            prior = set([b for b in self.__bindings if b.get_equation() is changed_eq])
-            prior_names = list(map(lambda b : b.get_name(), prior))
-            def unaffected_check(b):
-                if b.get_equation() is changed_eq: return False
-                symbols = b.get_free_symbols(True)
-                name = b.get_name()
-                if not name in unbound and not isinstance(name, tuple):
-                    symbols.add(name)
-                return len(symbols.intersection(prior_names)) == 0
-            self.__bindings = [b for b in self.__bindings if unaffected_check(b)]
-            self.__plots = [b for b in self.__plots if unaffected_check(b)]
-            unaffected = [b.get_equation() for b in self.__bindings + self.__plots]
+            unaffected_eqs = []
+            affected_names = []
+            valid_name_check = lambda name : not name in unbound and not isinstance(name, tuple)
+            for b in self.__bindings + self.__plots:
+                if b.get_equation() is changed_eq:
+                    name = b.get_name()
+                    if valid_name_check(name): affected_names.append(name)
+                else:
+                    unaffected_eqs.append(b.get_equation())
+            while len(unaffected_eqs) > 0:
+                has_changed = False
+                for b in self.__bindings + self.__plots:
+                    if b.get_equation() not in unaffected_eqs:
+                        continue
+                    name = b.get_name()
+                    symbols = b.get_free_symbols(True)
+                    if valid_name_check(name): symbols.add(name)
+                    if len(symbols.intersection(affected_names)) > 0:
+                        has_changed = True
+                        unaffected_eqs.remove(b.get_equation())
+                        if valid_name_check(name):
+                            affected_names.append(name)
+                if not has_changed: break
+            self.__bindings = [b for b in self.__bindings if b.get_equation() in unaffected_eqs]
+            self.__plots = [b for b in self.__plots if b.get_equation() in unaffected_eqs]
 
         def rm_dupes(var):
             def _rm_dupes(b, v = var):
@@ -128,7 +141,7 @@ class EquationEditor(ScrollableFrame):
         bound = list(map(lambda b : b.get_name(), self.__bindings))
         for e in self.__entries:
             p = e.get_parsed()
-            if e in unaffected:
+            if e in unaffected_eqs:
                 continue
             p.reset()
             if p.has_error():
