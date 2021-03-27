@@ -436,8 +436,6 @@ class Parsed:
                 elif len(args) != len(set(args)):
                     raise ParsingError("Parsed.eval_bind", "Duplicate parameters.")
                 func = sy.Lambda(args, rarg)
-                if len(parser.get_symbols(func, Parser.FILTER_RESERVED)) > 0:
-                    raise ParsingError("Parsed.eval_bind", "Cannot map to reserved variables.")
                 self.__bind(sy.Function(larg_name), func, None)
             elif isinstance(larg, Parser.VAR_TYPES) and not parser.is_reserved(larg):
                 if parser.is_defined(larg_name):
