@@ -2,6 +2,8 @@ import copy
 
 import numpy as np
 import sympy as sy
+from sympy.sets import Set
+from sympy.sets.conditionset import ConditionSet
 from sympy.integrals import Integral
 from sympy.core.function import UndefinedFunction, AppliedUndef, Derivative
 from sympy.parsing.sympy_parser import parse_expr
@@ -176,6 +178,14 @@ class Parser:
         except:
             return None
 
+    def solve_for(self, sym, expr):
+        ss = sy.solveset(expr, sym, domain = sy.S.Reals)
+        try:
+            ss = list(ss)
+        except:
+            pass
+        return ss
+
     def get_default_subs(self): return self.__default_subs
     def get_default_repl(self): return self.__default_repl
     def get_default_trans(self): return self.__default_trans
@@ -194,6 +204,17 @@ class Binding:
         self.__parametric_lims = {} if pl is None else pl
 
         self.__signature = sig
+
+        self.__check_body()
+
+    def __check_body(self):
+        if isinstance(self.__body, list):
+            if len(self.__body) == 0:
+                raise ParsingError("Parsed.bind", "No solutions for " + str(self.__name) + ".")
+            elif len(self.__body) == 1:
+                self.__body = self.__body[0]
+        if not isinstance(self.__body, (sy.Expr, Relational, tuple, Tuple, list, Set)):
+            raise ParsingError("Parsed.bind", "Invalid bind.")
 
     def split(self):
         if isinstance(self.__body, list):
@@ -232,6 +253,9 @@ class Binding:
         self.__body = getattr(Parser.get_instance(), func)(self.__body, tr)
         for (d, _) in tr:
             if d in fv: self.__dependencies.add(d)
+        if isinstance(self.__body, ConditionSet):
+            self.__body = Parser.get_instance().solve_for(self.__body.sym, self.__body.condition)
+            self.__check_body()
     def subs(self, sb = None):
         self.__transform('subs', sb, Parser.get_instance().get_default_subs())
     def replace(self, rp = None):
@@ -443,8 +467,7 @@ class Parsed:
                 else:
                     self.__bind(Parser.Y, sol, PlotType.LINE_2D)
             elif Parser.X in xyz:
-                self.__bind(Parser.X, list(sy.solveset(sy.Eq(larg, rarg), Parser.X,
-                    domain = sy.S.Reals)), None)
+                self.__bind(Parser.X, parser.solve_for(Parser.X, sy.Eq(larg, rarg)), None)
             else:
                 self.__bind(None, sy.Eq(larg, rarg), None)
         else:
@@ -457,13 +480,6 @@ class Parsed:
         self.__eval_bind()
         self.__eval_finish()
     def __bind(self, name, body, plot_type):
-        if isinstance(body, list):
-            if len(body) == 0:
-                raise ParsingError("Parsed.bind", "No solutions for " + str(name) + ".")
-            elif len(body) == 1:
-                body = body[0]
-        if not isinstance(body, (sy.Expr, Relational, tuple, Tuple, list)):
-            raise ParsingError("Parsed.bind", "Invalid bind.")
         self.__raw_binding = Binding(name, body, plot_type)
 
     def reset(self):
