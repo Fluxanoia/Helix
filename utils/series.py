@@ -93,7 +93,7 @@ class HelixSeries(ABC):
         else:
             prepend = xlim[0] < self._min_x
             append = xlim[1] > self._max_x
-            assert len([x for x in [prepend, append] if x]) == 1
+            assert len([x for x in [prepend, append] if x]) < 2
             segments = self._series.get_segments()
             if prepend:
                 self._data.extend(segments)
@@ -208,18 +208,21 @@ class HelixSeries(ABC):
     @staticmethod
     def generate_series(plot, detail):
         pt = plot.get_plot_type()
-        if pt == PlotType.LINE_2D:
-            return Line2DPlot(plot, detail)
-        elif pt == PlotType.PARAMETRIC_2D:
-            return Parametric2DPlot(plot, detail)
-        elif pt == PlotType.IMPLICIT_2D:
-            return Implicit2DPlot(plot, detail)
-        elif pt == PlotType.SURFACE:
-            return SurfacePlot(plot, detail)
-        elif pt == PlotType.PARAMETRIC_3D:
-            return Parametric3DLinePlot(plot, detail)
-        elif pt == PlotType.PARAMETRIC_SURFACE:
-            return ParametricSurfacePlot(plot, detail)
+        try:
+            if pt == PlotType.LINE_2D:
+                return Line2DPlot(plot, detail)
+            elif pt == PlotType.PARAMETRIC_2D:
+                return Parametric2DPlot(plot, detail)
+            elif pt == PlotType.IMPLICIT_2D:
+                return Implicit2DPlot(plot, detail)
+            elif pt == PlotType.SURFACE:
+                return SurfacePlot(plot, detail)
+            elif pt == PlotType.PARAMETRIC_3D:
+                return Parametric3DLinePlot(plot, detail)
+            elif pt == PlotType.PARAMETRIC_SURFACE:
+                return ParametricSurfacePlot(plot, detail)
+        except:
+            return None
         raise ValueError("Unexpected plot type.")
 
 class Line2DPlot(HelixSeries):

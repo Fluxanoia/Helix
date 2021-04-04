@@ -154,7 +154,8 @@ class HelixPlot(FigureCanvasTkAgg):
         current_sigs = list(map(lambda s : s.get_signature(), self.__data))
         plots = [p for p in plots if p.get_signature() not in current_sigs]
         for p in plots:
-            self.__data.extend([HelixSeries.generate_series(p, self.__detail) for p in p.split()])
+            series = [HelixSeries.generate_series(p, self.__detail) for p in p.split()]
+            self.__data.extend(list(filter(lambda s : s is not None, series)))
 
     def __debounce_redraw(self):
         if self.__debounce_id is not None:
