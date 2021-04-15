@@ -17,7 +17,6 @@ from sympy.logic.boolalg import BooleanFunction
 
 from utils.parsing import Parser
 from utils.maths import PlotType
-from utils.override import overrides
 
 class HelixSeries(ABC):
 
@@ -232,11 +231,9 @@ class Line2DPlot(HelixSeries):
         check = check_arguments([self._plot.get_body()], 1, 1)[0]
         self._series = LineOver1DRangeSeries(*check)
 
-    @overrides
     def _generate_data(self, xlim, ylim, zlim):
         if self._dx(xlim): self._expand_line(xlim)
 
-    @overrides
     def draw(self, axis, xlim, ylim, zlim):
         self._expand_data(xlim, ylim, zlim)
         d = self._get_line(xlim, ylim)
@@ -251,7 +248,6 @@ class Parametric2DPlot(HelixSeries):
         self._is_parametric = True
         self._series = Parametric2DLineSeries(*(check_arguments(self._plot.get_body(), 2, 1)[0]))
 
-    @overrides
     def draw(self, axis, xlim, ylim, zlim):
         tlim = self._plot.get_parametric_limits()[self._series.var]
         self._series.start, self._series.end = tlim
@@ -289,16 +285,13 @@ class Implicit2DPlot(HelixSeries):
         self._series = ImplicitSeries(expr, x, y, has_equality,
             True, 0, 300, self._plot.get_colour())
 
-    @overrides
     def set_detail(self, detail): pass
-    @overrides
     def _generate_data(self, xlim, ylim, zlim):
         if self._dx(xlim) or self._dy(ylim):
             self._series.start_x, self._series.end_x = xlim
             self._series.start_y, self._series.end_y = ylim
             self._data.extend(_matplotlib_list(self._series.get_raster()[0]))
 
-    @overrides
     def draw(self, axis, xlim, ylim, zlim):
         self._expand_data(xlim, ylim, zlim)
         axis.fill(*self._data, facecolor = self._plot.get_colour())
@@ -309,11 +302,9 @@ class SurfacePlot(HelixSeries):
         super().__init__(plot, detail)
         self._series = SurfaceOver2DRangeSeries(*check_arguments([self._plot.get_body()], 1, 2)[0])
 
-    @overrides
     def _generate_data(self, xlim, ylim, zlim):
         if self._dx(xlim) or self._dy(ylim): self._expand_mesh(xlim, ylim)
 
-    @overrides
     def draw(self, axis, xlim, ylim, zlim):
         self._expand_data(xlim, ylim, zlim)
         d = self._get_mesh(xlim, ylim, zlim)
@@ -331,7 +322,6 @@ class Parametric3DLinePlot(HelixSeries):
         self._is_parametric = True
         self._series = Parametric3DLineSeries(*check_arguments(self._plot.get_body(), 3, 1)[0])
 
-    @overrides
     def draw(self, axis, xlim, ylim, zlim):
         tlim = self._plot.get_parametric_limits()[self._series.var]
         self._series.start, self._series.end = tlim
@@ -345,11 +335,9 @@ class ParametricSurfacePlot(HelixSeries):
         self._is_parametric = True
         self._series = ParametricSurfaceSeries(*check_arguments(self._plot.get_body(), 3, 2)[0])
 
-    @overrides
     def _generate_data(self, xlim, ylim, zlim):
         if self._dx(xlim) or self._dy(ylim): self._expand_mesh(xlim, ylim)
 
-    @overrides
     def draw(self, axis, xlim, ylim, zlim):
         ulim = self._plot.get_parametric_limits()[self._series.var_u]
         vlim = self._plot.get_parametric_limits()[self._series.var_v]
