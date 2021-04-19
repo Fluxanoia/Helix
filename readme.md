@@ -4,7 +4,7 @@
 
 ### Windows
 
-If you are on 64-bit Windows, you can use the pre-bundled build of the software [here](https://github.com/Fluxanoia/Helix/raw/master/builds/Helix-Win64.zip).
+If you are on 64-bit Windows, you can use the pre-bundled build of the software [here](https://github.com/Fluxanoia/Helix/raw/master/builds/Helix-Win64.zip). If you are on 32-bit Windows, see the section on [building](#building-the-project) or [running from the source](#running-from-source). If something doesn\'t work, it would be appreciated if you shared the error via an issue or [email](mailto:contact@fluxanoia.co.uk).
 
 ### MacOS and Linux
 
