@@ -22,6 +22,7 @@ Helix is written in [Python 3](https://www.python.org/downloads/) (specifically 
 
 - [NumPy](https://numpy.org),
 - [Matplotlib](https://matplotlib.org),
+- [PIL](https://python-pillow.org),
 - [SymPy](https://www.sympy.org/en/index.html),
 
 as well as [PyInstaller](http://www.pyinstaller.org) for building.
